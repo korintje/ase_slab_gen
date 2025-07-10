@@ -363,7 +363,7 @@ def get_converted_atoms(
                         # atom = Atom(symbol, np.dot(shifted_abc, latt_vecs_new))
                         atom = SlabAtom(symbol, np.dot(shifted_abc, latt_vecs_new))
 
-                        print(f"add count {add_count}")
+                        # print(f"add count {add_count}")
                         add_count += 1
 
                         atoms_set.add(atom)
@@ -372,9 +372,9 @@ def get_converted_atoms(
     # converted_atoms.set_cell(latt_vecs_new)
     # for atom in atoms_set:
     #     converted_atoms.append(atom)
-    print("-----")
-    print(f"Length: {len(list(atoms_set))}")
-    print("-----")
+    # print("-----")
+    # print(f"Length: {len(list(atoms_set))}")
+    # print("-----")
     converted_atoms = SlabBulk(latt_vecs_new, list(atoms_set), [])
 
     return converted_atoms

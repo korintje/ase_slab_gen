@@ -61,7 +61,7 @@ for i, slab in enumerate(slabs):
     # slab_model.set_scaleA(1)
     # slab_model.set_scaleB(1)
     # slab_cell = slab_model.to_atoms()
-    print(slab)
+    # print(slab)
     # print(slab_cell.get_dipole_moment())
     # add_vacuum(slab_cell, 30.0)
     save_slab_image(slab, f"{i}.png")

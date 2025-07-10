@@ -153,8 +153,8 @@ class RealLattice():
             if vbond.distance < thr_distance:
                 self.bonds.append(vbond)
         
-        for i, bond in enumerate(self.bonds):
-            print(f"Bond {i}: from {bond.tail_element} {bond.get_tail_coord_frac(self.trans_vec_set)} to {bond.head_element} {bond.get_head_coord_frac(self.trans_vec_set)}.")
+        # for i, bond in enumerate(self.bonds):
+        #     print(f"Bond {i}: from {bond.tail_element} {bond.get_tail_coord_frac(self.trans_vec_set)} to {bond.head_element} {bond.get_head_coord_frac(self.trans_vec_set)}.")
 
     
     def to_slab(self, offset: float, thickness: int, adsorbates=None):
@@ -330,11 +330,11 @@ class RealLattice():
                         )
                     )
                     
-        for i, bond in enumerate(top_bonds):
-            print(f"top bond {i}: from {bond.tail_element} {bond.get_tail_coord_frac(self.trans_vec_set)} to {bond.head_element} {bond.get_head_coord_frac(self.trans_vec_set)}.")
+        # for i, bond in enumerate(top_bonds):
+        #     print(f"top bond {i}: from {bond.tail_element} {bond.get_tail_coord_frac(self.trans_vec_set)} to {bond.head_element} {bond.get_head_coord_frac(self.trans_vec_set)}.")
 
-        for i, bond in enumerate(bottom_bonds):
-            print(f"bottom bond {i}: from {bond.tail_element} {bond.get_tail_coord_frac(self.trans_vec_set)} to {bond.head_element} {bond.get_head_coord_frac(self.trans_vec_set)}.")
+        # for i, bond in enumerate(bottom_bonds):
+        #     print(f"bottom bond {i}: from {bond.tail_element} {bond.get_tail_coord_frac(self.trans_vec_set)} to {bond.head_element} {bond.get_head_coord_frac(self.trans_vec_set)}.")
         
         return top_bonds, bottom_bonds
     
@@ -369,7 +369,7 @@ class RealLattice():
                 b = head_abc[1]
                 da = - np.floor(a)
                 db = - np.floor(b)
-                print(f"a = {a}, floor(a) = {np.floor(a)}, b = {b}, floor(b) = {np.floor(b)} da = {da}, db = {db}")
+                # print(f"a = {a}, floor(a) = {np.floor(a)}, b = {b}, floor(b) = {np.floor(b)} da = {da}, db = {db}")
                 ads_atom = RealAtom(
                     ads_element,
                     np.array([
