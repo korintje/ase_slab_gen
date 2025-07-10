@@ -12,7 +12,7 @@ POSIT_THR = 0.01
 STEP_FOR_GENOMS: float = 0.50  # angstromset()
 
 
-def surfaces(lattice, indices, layers: int, vacuum: float=0.0, adsorbates=None) -> Atoms:
+def surfaces(lattice, indices, layers: int, vacuum: float=0.0, adsorbates=[]) -> Atoms:
     """Create surfaces from a given lattice and Miller indices.
 
     lattice: Atoms object or str
@@ -64,7 +64,7 @@ def surfaces(lattice, indices, layers: int, vacuum: float=0.0, adsorbates=None) 
     atoms = lattice
     hkl_directed_lattice = convert_lattice_with_hkl_normal(atoms, *indices)
     slabs = get_slabs(hkl_directed_lattice, layers)
-    surfaces = [slab.to_atoms() for slab in slabs]
+    surfaces = [slab.to_atoms(adsorbates=adsorbates) for slab in slabs]
     
     return surfaces
 
@@ -360,21 +360,14 @@ def get_converted_atoms(
                         dz = dc * latt_vecs_new[2][2]
                         if dz < POSIT_THR:
                             shifted_abc[2] -= 1.0
-                        # atom = Atom(symbol, np.dot(shifted_abc, latt_vecs_new))
                         atom = SlabAtom(symbol, np.dot(shifted_abc, latt_vecs_new))
-
-                        # print(f"add count {add_count}")
                         add_count += 1
-
                         atoms_set.add(atom)
     
     # converted_atoms = Atoms()
     # converted_atoms.set_cell(latt_vecs_new)
     # for atom in atoms_set:
     #     converted_atoms.append(atom)
-    # print("-----")
-    # print(f"Length: {len(list(atoms_set))}")
-    # print("-----")
     converted_atoms = SlabBulk(latt_vecs_new, list(atoms_set), [])
 
     return converted_atoms

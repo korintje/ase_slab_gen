@@ -75,7 +75,6 @@ class AtomEntry:
         ea, eb, ec = entry.abc
         oa, ob, oc = other.abc
 
-        # print(abs(ea - oa + np.copysign(0.5 - ea, 1)))
         da = min(abs(ea - oa), abs(ea - oa + np.copysign(0.5 - ea, 1)))
         db = min(abs(eb - ob), abs(eb - ob + np.copysign(0.5 - eb, 1)))
         dc = min(abs(ec - oc), abs(ec - oc + np.copysign(0.5 - ec, 1)))

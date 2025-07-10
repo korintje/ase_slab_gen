@@ -369,7 +369,6 @@ class RealLattice():
                 b = head_abc[1]
                 da = - np.floor(a)
                 db = - np.floor(b)
-                # print(f"a = {a}, floor(a) = {np.floor(a)}, b = {b}, floor(b) = {np.floor(b)} da = {da}, db = {db}")
                 ads_atom = RealAtom(
                     ads_element,
                     np.array([

@@ -127,16 +127,6 @@ class SlabAtom():
         if entry.element != other.element:
             return False
 
-        # ea, eb, ec = entry.abc
-        # oa, ob, oc = other.abc
-
-        # print(abs(ea - oa + np.copysign(0.5 - ea, 1)))
-        # da = min(abs(ea - oa), abs(ea - oa + np.copysign(0.5 - ea, 1)))
-        # db = min(abs(eb - ob), abs(eb - ob + np.copysign(0.5 - eb, 1)))
-        # dc = min(abs(ec - oc), abs(ec - oc + np.copysign(0.5 - ec, 1)))
-
-        # dabc = np.array([da, db, dc])
-        # dxyz = np.dot(dabc, entry.lattice)
         dxyz = entry.get_coord() - other.get_coord()
         rr = np.dot(dxyz, dxyz)
 
@@ -416,16 +406,15 @@ class Slab():
         self.bottom_bonds = bottom_bonds # List of Bonds
 
 
-    def to_atoms(self, adsorbates=None):
+    def to_atoms(self, adsorbates=[]):
 
         # Example
-        water = ASE_Atoms([ASE_Atom('H', (0, 0, 1)), ASE_Atom('O', (0, 0, 0)), ASE_Atom('H', (0, 1, 0))])
-        adsorbates = [
-            {"adsorbate": "He", "on": "Zn", "bond_length": 1.0},
-            {"adsorbate": "H", "on": "O", "bond_length": 1.0},
+        # water = ASE_Atoms([ASE_Atom('H', (0, 0, 1)), ASE_Atom('O', (0, 0, 0)), ASE_Atom('H', (0, 1, 0))])
+        # adsorbates = [
+            # {"adsorbate": "He", "on": "Zn", "bond_length": 1.0},
+            # {"adsorbate": "H", "on": "O", "bond_length": 1.0},
             # {"adsorbate": water, "on": "O", "ads_atom_index": 1, "bond_length": 1.5},
-        ]
-        adsorbates = []
+        # ]
 
         top_ads_atoms = self.create_ads_atoms(self.top_bonds, adsorbates)
         bottom_ads_atoms = self.create_ads_atoms(self.bottom_bonds, adsorbates)
@@ -472,7 +461,6 @@ class Slab():
                 b = head_abc[1]
                 da = - np.floor(a)
                 db = - np.floor(b)
-                # print(f"a = {a}, floor(a) = {np.floor(a)}, b = {b}, floor(b) = {np.floor(b)} da = {da}, db = {db}")
                 ads_atom = SlabAtom(
                     ads_element,
                     np.array([
