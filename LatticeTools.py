@@ -77,37 +77,47 @@ def get_cell_14(celldm: np.ndarray) -> np.ndarray | None:
 
 
 def lcm(a, b):
+    """Compute least common multiple of two integers."""
     return abs(a * b) // gcd(a, b) if a and b else abs(a or b)
 
 
 def lcm_multiple(numbers):
+    """Compute the least common multiple (LCM) of a list of integers."""
     return reduce(lcm, numbers, 1)
 
 
 def get_intercepts(h: int, k: int, l: int):
+    """
+    Given Miller indices (h, k, l), return:
+    - Intercepts with each axis (in lattice units)
+    """
     miller = np.array([h, k, l])
-    has_intercepts = miller != 0
-    nonzero = miller[has_intercepts]
-    num_intercepts = len(nonzero)
+    nonzero = miller[miller != 0]
 
-    if num_intercepts == 0:
-        scale = 0
+    if nonzero.size == 0:
         intercepts = np.zeros(3, dtype=int)
     else:
         scale = lcm_multiple(nonzero)
-        safe_miller = np.where(miller == 0, 1, miller)
-        intercepts = np.where(has_intercepts, scale // safe_miller, 0)
+        intercepts = np.array([
+            scale // v if v != 0 else 0
+            for v in miller
+        ])
 
-    return num_intercepts, has_intercepts, intercepts
+    return intercepts
 
 
-def get_int_vecs(num_intercepts, has_intercepts, intercepts):
+def get_int_vecs(intercepts: np.ndarray) -> np.ndarray:
+    """
+    Construct a set of 3 integer vectors aligned with the Miller plane,
+    based on the integer axis intercepts.
+    """
     vectors = np.zeros((3, 3), dtype=int)
     signs = np.sign(intercepts)
+    count = np.count_nonzero(intercepts)
 
-    # When the Miller plane intersects only one axis.
-    if num_intercepts <= 1:
-        if has_intercepts[0]:
+    if count <= 1:
+        # One-axis intercept
+        if intercepts[0] != 0:
             if intercepts[0] > 0:
                 vectors[0, 1] = 1
                 vectors[1, 2] = 1
@@ -117,7 +127,7 @@ def get_int_vecs(num_intercepts, has_intercepts, intercepts):
                 vectors[1, 1] = 1
                 vectors[2, 0] = -1
 
-        elif has_intercepts[1]:
+        elif intercepts[1] != 0:
             if intercepts[1] > 0:
                 vectors[0, 2] = 1
                 vectors[1, 0] = 1
@@ -127,7 +137,7 @@ def get_int_vecs(num_intercepts, has_intercepts, intercepts):
                 vectors[1, 2] = 1
                 vectors[2, 1] = -1
 
-        elif has_intercepts[2]:
+        elif intercepts[2] != 0:
             if intercepts[2] > 0:
                 vectors[0, 0] = 1
                 vectors[1, 1] = 1
@@ -137,9 +147,9 @@ def get_int_vecs(num_intercepts, has_intercepts, intercepts):
                 vectors[1, 0] = 1
                 vectors[2, 2] = -1
 
-    # When the Miller plane intersects exactly two axes.
-    elif num_intercepts == 2:
-        if not has_intercepts[2]:
+    elif count == 2:
+        # Two-axis intercept
+        if intercepts[2] == 0:
             s = signs[[0, 1]]
             vectors[0, 2] = s[0] * s[1]
             vectors[1, 0] = intercepts[0]
@@ -147,7 +157,7 @@ def get_int_vecs(num_intercepts, has_intercepts, intercepts):
             vectors[2, 0] = s[0]
             vectors[2, 1] = s[1]
 
-        elif not has_intercepts[1]:
+        elif intercepts[1] == 0:
             s = signs[[0, 2]]
             vectors[0, 1] = s[0] * s[1]
             vectors[1, 0] = -intercepts[0]
@@ -155,7 +165,7 @@ def get_int_vecs(num_intercepts, has_intercepts, intercepts):
             vectors[2, 0] = s[0]
             vectors[2, 2] = s[1]
 
-        elif not has_intercepts[0]:
+        elif intercepts[0] == 0:
             s = signs[[1, 2]]
             vectors[0, 0] = s[0] * s[1]
             vectors[1, 1] = intercepts[1]
@@ -163,8 +173,8 @@ def get_int_vecs(num_intercepts, has_intercepts, intercepts):
             vectors[2, 1] = s[0]
             vectors[2, 2] = s[1]
 
-    # When the Miller plane intersects all three axes.
     else:
+        # All three axes are intersected
         s = signs
         if s[2] > 0:
             vectors[0, 1] = s[0] * intercepts[1]
@@ -305,7 +315,7 @@ def convert_lattice_with_hkl_normal(
         raise ValueError("Given atoms object is blank.")
     
     # Generate integer vectors used for the lattice transformation
-    int_vecs = get_int_vecs(*get_intercepts(h, k, l))
+    int_vecs = get_int_vecs(get_intercepts(h, k, l))
 
     # Calculate the bounding box for slicing the cell
     bound_box = get_boundary_box(int_vecs)
