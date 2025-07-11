@@ -34,7 +34,6 @@ def get_cell_dm_14(lattice_vecs: np.ndarray) -> np.ndarray | None:
     if not check_cell(lattice_vecs):
         return None
     a, b, c, cos_alpha, cos_beta, cos_gamma = get_lattice_consts(lattice_vecs)
-    # celldm[0] = a in Bohr, celldm[1] = b/a, celldm[2] = c/a
     celldm = np.array([
         a / BOHR_RADIUS_ANGS,
         b / a if a != 0 else 0.0,
@@ -102,19 +101,17 @@ def get_intercepts(h: int, k: int, l: int):
     return num_intercepts, has_intercepts, intercepts
 
 
-def get_vectors(num_intercepts, has_intercepts, intercepts):
+def get_int_vecs(num_intercepts, has_intercepts, intercepts):
     vectors = np.zeros((3, 3), dtype=int)
-
     signs = np.sign(intercepts)
 
-    # Define lattice vectors when the Miller plane intersects only one axis.
-    # This is a special case for (hkl) planes like (1, 0, 0), (0, 1, 0), (0, 0, 1).
+    # When the Miller plane intersects only one axis.
     if num_intercepts <= 1:
         if has_intercepts[0]:
             if intercepts[0] > 0:
-                vectors[0, 1] = 1  # vector1 y
-                vectors[1, 2] = 1  # vector2 z
-                vectors[2, 0] = 1  # vector3 x (normal)
+                vectors[0, 1] = 1
+                vectors[1, 2] = 1
+                vectors[2, 0] = 1
             else:
                 vectors[0, 2] = 1
                 vectors[1, 1] = 1
@@ -140,8 +137,7 @@ def get_vectors(num_intercepts, has_intercepts, intercepts):
                 vectors[1, 0] = 1
                 vectors[2, 2] = -1
 
-    # Define lattice vectors when the Miller plane intersects exactly two axes.
-    # This includes planes like (1,1,0), (1,0,1), or (0,1,1).
+    # When the Miller plane intersects exactly two axes.
     elif num_intercepts == 2:
         if not has_intercepts[2]:
             s = signs[[0, 1]]
@@ -167,8 +163,7 @@ def get_vectors(num_intercepts, has_intercepts, intercepts):
             vectors[2, 1] = s[0]
             vectors[2, 2] = s[1]
 
-    # Define lattice vectors when the Miller plane intersects all three axes.
-    # This is the general case for (hkl) planes such as (1,1,1).
+    # When the Miller plane intersects all three axes.
     else:
         s = signs
         if s[2] > 0:
@@ -184,88 +179,42 @@ def get_vectors(num_intercepts, has_intercepts, intercepts):
 
         vectors[2, :] = s
 
-    # vectors[0], vectors[1], vectors[2] がそれぞれ vector1, vector2, vector3
-    return vectors[0], vectors[1], vectors[2]
+    return vectors
 
 
-def get_boundary_box(
-    vector1: np.ndarray,
-    vector2: np.ndarray,
-    vector3: np.ndarray
-) -> np.ndarray:
+def get_boundary_box(vector_set: np.ndarray) -> np.ndarray:
     """
-    Calculate the bounding box limits along each Cartesian axis based on
-    the three lattice vectors defining a unit cell.
-
-    The bounding box is represented as a (3, 2) array, where each row
-    corresponds to an axis (x, y, z), and the two columns represent the
-    minimum and maximum coordinate extents respectively.
-
+    Calculate bounding box min/max per axis from 3 lattice vectors.
     Parameters:
-        vector1 (np.ndarray): First lattice vector (length 3)
-        vector2 (np.ndarray): Second lattice vector (length 3)
-        vector3 (np.ndarray): Third lattice vector (length 3)
-
+        vector_set (np.ndarray): 3 Integer vectors
     Returns:
-        np.ndarray: Bounding box array of shape (3, 2),
-                    with min and max values along each axis.
+        np.ndarray: shape (3, 2), min and max per axis
     """
-
-    # Initialize bounding box array with zeros:
-    # Each row for x,y,z axes; columns: [min, max]
+    vecs_by_axis = vector_set.T
     bound_box = np.zeros((3, 2), dtype=int)
-
-    # Iterate over x,y,z components (indices 0,1,2)
-    for i in range(3):
-        # For each vector, add negative components to min bound,
-        # positive components to max bound.
-
-        # vector1 component
-        if vector1[i] < 0:
-            bound_box[i][0] += vector1[i]
-        else:
-            bound_box[i][1] += vector1[i]
-
-        # vector2 component
-        if vector2[i] < 0:
-            bound_box[i][0] += vector2[i]
-        else:
-            bound_box[i][1] += vector2[i]
-
-        # vector3 component
-        if vector3[i] < 0:
-            bound_box[i][0] += vector3[i]
-        else:
-            bound_box[i][1] += vector3[i]
-
+    bound_box[:, 1] = np.sum(np.where(vecs_by_axis > 0, vecs_by_axis, 0), axis=1)
+    bound_box[:, 0] = np.sum(np.where(vecs_by_axis < 0, vecs_by_axis, 0), axis=1)
     return bound_box
 
 
 def get_lattice_vecs(
     atoms: ASE_Atoms,
-    vector1: np.ndarray,
-    vector2: np.ndarray,
-    vector3: np.ndarray
+    vector_set: np.ndarray
 ) -> np.ndarray:
     """
     Calculate the new lattice vectors for the bulk cell after applying
     integer linear combinations of the original lattice vectors.
     Parameters:
         atoms (Atoms): ASE Atoms object containing the original cell.
-        vector1 (np.ndarray): First integer vector (length 3).
-        vector2 (np.ndarray): Second integer vector (length 3).
-        vector3 (np.ndarray): Third integer vector (length 3).
+        vector_set (np.ndarray): Integer vectors.
     Returns:
         np.ndarray: New lattice vectors array with shape (3, 3).
     """
-
-    # Extract the original lattice vectors from the Atoms object
     latt_vecs_bulk = atoms.cell[:]
 
     # Calculate new lattice vectors by multiplying integer matrix by original vectors
     # (integer linear combinations of the original lattice vectors)
-    latt_int = np.stack([vector1, vector2, vector3])
-    latt_unit0 = np.dot(latt_int, latt_vecs_bulk)
+    latt_unit0 = np.dot(vector_set, latt_vecs_bulk)
 
     # Extract lattice constants (lengths and angles) from the new lattice vectors
     latt_consts = get_cell_dm_14(latt_unit0)
@@ -278,9 +227,7 @@ def get_lattice_vecs(
 
 def get_converted_atoms(
     atoms: ASE_Atoms,
-    vector1: np.ndarray,
-    vector2: np.ndarray,
-    vector3: np.ndarray,
+    vector_set: np.ndarray,
     bound_box: np.ndarray,
     latt_vecs_new: np.ndarray,
 ) -> SlabBulk:
@@ -289,8 +236,7 @@ def get_converted_atoms(
     into a new unit cell defined by transformed lattice vectors.
     Parameters:
         atoms (ASE_Atoms): Original ASE Atoms object.
-        vector1, vector2, vector3 (np.ndarray): Integer vectors used for the 
-            lattice transformation matrix.
+        vector_set (np.ndarray): Integer vectors used for the lattice transformation matrix.
         bound_box (np.ndarray): 3x2 array of integer boundaries for search range.
         latt_vecs_new (np.ndarray): New lattice vectors of the slab cell.
     Returns:
@@ -304,7 +250,7 @@ def get_converted_atoms(
     inv_latt_vecs_old = np.linalg.inv(atoms.get_cell())
     
     # Inverse of integer transformation matrix
-    inv_latt_int = np.linalg.inv(np.stack([vector1, vector2, vector3]))
+    inv_latt_int = np.linalg.inv(vector_set)
 
     atoms_set = set()
 
@@ -359,19 +305,17 @@ def convert_lattice_with_hkl_normal(
         raise ValueError("Given atoms object is blank.")
     
     # Generate new basis vectors from the (hkl) intercepts
-    vector1, vector2, vector3 = get_vectors(*get_intercepts(h, k, l))
+    int_vecs = get_int_vecs(*get_intercepts(h, k, l))
 
     # Calculate the bounding box for slicing the cell
-    bound_box = get_boundary_box(vector1, vector2, vector3)
+    bound_box = get_boundary_box(int_vecs)
 
     # Determine new lattice vectors for the reoriented cell
-    latt_vecs_new = get_lattice_vecs(
-        atoms, vector1, vector2, vector3
-    )
+    latt_vecs_new = get_lattice_vecs(atoms, int_vecs)
 
     # Apply the transformation and extract the rotated slab
     converted_cell = get_converted_atoms(
-        atoms, vector1, vector2, vector3, bound_box, latt_vecs_new
+        atoms, int_vecs, bound_box, latt_vecs_new
     )
 
     return converted_cell
