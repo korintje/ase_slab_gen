@@ -28,7 +28,6 @@ class SlabGenom:
     Represents the vertical structure of a slab by capturing the sequence
     of atomic layers and their compositions and spacings.
     """
-
     COORD_THR = 0.10  # Tolerance for z-coordinate grouping (angstrom)
     LAYER_THR = 0.10  # Minimum spacing to recognize as a new layer (angstrom)
 

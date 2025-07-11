@@ -1,5 +1,5 @@
 import numpy as np
-from ase import Atoms as ASE_Atoms
+from ase import Atoms
 from SlabModels import SlabAtom, SlabBulk
 from math import gcd
 from functools import reduce
@@ -208,7 +208,7 @@ def get_boundary_box(int_vecs: np.ndarray) -> np.ndarray:
 
 
 def get_lattice_vecs(
-    atoms: ASE_Atoms,
+    atoms: Atoms,
     int_vecs: np.ndarray
 ) -> np.ndarray:
     """
@@ -236,7 +236,7 @@ def get_lattice_vecs(
 
 
 def get_converted_atoms(
-    atoms: ASE_Atoms,
+    atoms: Atoms,
     int_vecs: np.ndarray,
     bound_box: np.ndarray,
     latt_vecs_new: np.ndarray,
@@ -245,7 +245,7 @@ def get_converted_atoms(
     Generate a transformed atomic slab by translating and filtering atoms
     into a new unit cell defined by transformed lattice vectors.
     Parameters:
-        atoms (ASE_Atoms): Original ASE Atoms object.
+        atoms (Atoms): Original ASE Atoms object.
         int_vecs (np.ndarray): Integer vectors used for the lattice transformation matrix.
         bound_box (np.ndarray): 3x2 array of integer boundaries for search range.
         latt_vecs_new (np.ndarray): New lattice vectors of the slab cell.
@@ -290,7 +290,7 @@ def get_converted_atoms(
 
 
 def convert_lattice_with_hkl_normal(
-    atoms: ASE_Atoms, h: int, k: int, l: int
+    atoms: Atoms, h: int, k: int, l: int
 ) -> SlabBulk:
     """
     Convert the orientation of a crystal structure so that the (hkl) plane 
