@@ -304,7 +304,7 @@ def convert_lattice_with_hkl_normal(
     if positions.size == 0:
         raise ValueError("Given atoms object is blank.")
     
-    # Generate new basis vectors from the (hkl) intercepts
+    # Generate integer vectors used for the lattice transformation
     int_vecs = get_int_vecs(*get_intercepts(h, k, l))
 
     # Calculate the bounding box for slicing the cell

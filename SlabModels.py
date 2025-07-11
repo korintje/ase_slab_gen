@@ -15,7 +15,6 @@ THICK_THR: float = 1.0e-12     # angstrom
 
 class SlabBond():
 
-
     def __init__(
         self,
         tail_element: str,
@@ -24,7 +23,6 @@ class SlabBond():
         head_coord: np.ndarray,
         distance: float
     ):
-
         self.tail_element: str = tail_element
         self.head_element: str = head_element
         self.tail_coord: np.ndarray = tail_coord
@@ -33,24 +31,17 @@ class SlabBond():
 
 
     def get_tail_coord(self):
-
         return self.tail_coord
 
-
     def get_head_coord(self):
-
         return self.head_coord
 
-
     def get_tail_coord_frac(self, trans_vec_set: np.ndarray):
-
         inv_vec_set = np.linalg.inv(trans_vec_set)
         tail_coord_frac = np.dot(self.tail_coord, inv_vec_set)
         return tail_coord_frac
-
     
     def get_head_coord_frac(self, trans_vec_set: np.ndarray):
-
         inv_vec_set = np.linalg.inv(trans_vec_set)
         head_coord_frac = np.dot(self.head_coord, inv_vec_set)
         return head_coord_frac
@@ -61,31 +52,22 @@ class SlabAtom():
     POSIT_THR = 0.01
 
     def __init__(self, element, coord):
-
         self.element: str = element
         self.coord: np.ndarray = coord
 
-
     def __lt__(self, other):
-
         return self._compare_to_static(self, other) < 0
 
-
     def __eq__(self, other):
-        
         if isinstance(other, SlabAtom):
             return self._equals_static(self, other)
         return False
 
-
     def __hash__(self):
-        
         return hash(self.element)
-
 
     @staticmethod
     def _compare_to_static(atom1, atom2):
-
         if atom1 is None:
             return -1
 
@@ -114,10 +96,8 @@ class SlabAtom():
 
         return (atom1.element > atom2.element) - (atom1.element < atom2.element)
 
-
     @staticmethod
     def _equals_static(entry, obj):
-
         if entry is obj:
             return True
         if obj is None or not isinstance(obj, SlabAtom):
@@ -132,26 +112,18 @@ class SlabAtom():
 
         return rr <= SlabAtom.POSIT_THR ** 2
     
-    
     def set_coord(self, coord: np.ndarray):
-
         self.coord = coord
 
-
     def get_coord(self):
-        
         return self.coord
-
     
     def get_coord_frac(self, trans_vec_set: np.ndarray):
-        
         inv_vec_set = np.linalg.inv(trans_vec_set)
         coord_frac = np.dot(self.coord, inv_vec_set)
         return coord_frac
 
-
     def get_inner_bond_to(self, end_atom):
-
         rel_coord = end_atom.coord - self.coord
         distance = np.linalg.norm(rel_coord)
         virtual_bond = SlabBond(
@@ -163,9 +135,7 @@ class SlabAtom():
             )
         return virtual_bond
 
-
     def get_outer_bonds_to(self, end_atom, trans_vec_set: np.ndarray):
-        
         trans_vec_sets = np.delete(BOUND_BOXES, 0, 0) @ trans_vec_set
         end_atom_coords = trans_vec_sets + end_atom.coord
         rel_coords = end_atom_coords - self.coord
@@ -179,22 +149,17 @@ class SlabAtom():
                 distance,
             ) for rel_coord, distance in zip(rel_coords, distances)
         ]
-
         return virtual_bonds
 
 
 class SlabBulk():
-    
 
-    def __init__(self, trans_vec_set, atoms, bonds):
-        
+    def __init__(self, trans_vec_set, atoms, bonds):  
         self.trans_vec_set = trans_vec_set
         self.atoms = atoms # List of Atom
         self.bonds = bonds # List of Bonds
-
     
     def setup_bonds(self):
-
         min_distance = np.inf
         virtual_bonds = []
         
@@ -220,26 +185,19 @@ class SlabBulk():
         for vbond in virtual_bonds:
             if vbond.distance < thr_distance:
                 self.bonds.append(vbond)
- 
     
     def to_slab(self, offset: float, thickness: int):
-
         thickness = int(thickness)
-
         new_trans_vec_set: np.ndarray = self.trans_vec_set * np.array([
             [1.0, 1.0, 1.0],
             [1.0, 1.0, 1.0],
             [float(thickness), float(thickness), float(thickness)]
         ])
-
         new_atoms = self.create_slab_atoms(offset, thickness)
         top_bonds, bottom_bonds = self.create_dangling_bonds(offset, thickness)
-
         return Slab(new_trans_vec_set, new_atoms, top_bonds, bottom_bonds)
 
-
     def create_slab_atoms(self, offset, thickness):
-
         new_atoms = []
         for i in range(thickness):
             bottom_atoms = []
@@ -262,7 +220,6 @@ class SlabBulk():
 
 
     def create_dangling_bonds(self, offset, thickness):
-        
         top_z_shift = float(thickness - 1) * self.trans_vec_set[2]
         top_bonds = []
         bottom_bonds = []
@@ -388,17 +345,13 @@ class SlabBulk():
 
 class Slab():
 
-
     def __init__(self, trans_vec_set, atoms, top_bonds, bottom_bonds):
-        
         self.trans_vec_set = trans_vec_set
         self.atoms = atoms # List of Atom
         self.top_bonds = top_bonds # List of Bonds
         self.bottom_bonds = bottom_bonds # List of Bonds
 
-
     def to_atoms(self, adsorbates=[]):
-
         top_ads_atoms = self.create_ads_atoms(self.top_bonds, adsorbates)
         bottom_ads_atoms = self.create_ads_atoms(self.bottom_bonds, adsorbates)
         all_atoms = self.atoms + top_ads_atoms + bottom_ads_atoms
@@ -413,11 +366,9 @@ class Slab():
 
         return ase_atoms
 
-
     def create_ads_atoms(self, bonds, adsorbates):
-
         ads_atoms = []
-        for i, bond in enumerate(bonds):
+        for bond in bonds:
             
             adsorbate_props = next((ads for ads in adsorbates if ads["on"] == bond.tail_element), None)
             if not adsorbate_props:

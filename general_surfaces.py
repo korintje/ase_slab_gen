@@ -46,8 +46,7 @@ def surfaces(
                 "ads_atom_index": 0,
                 "rotation_top": (90.0, 45.0, 0.0),
                 "rotation_bottom": (0.0, 45.0, 0.0),
-            },            
-        
+            },
         ]
         adsorbate (necessary): str or Atom object or Atoms object
             Adsorbate atom (molecule) object or its symbol
