@@ -4,15 +4,20 @@ from SlabGenom import SlabGenom
 from SlabModels import SlabBulk, Slab
 from LatticeTools import convert_lattice_with_hkl_normal
 
-BOHR_RADIUS_SI = 0.52917720859E-10 # m
-BOHR_RADIUS_CM = BOHR_RADIUS_SI * 100.0
-BOHR_RADIUS_ANGS = BOHR_RADIUS_CM * 1.0E8
-PACK_THR: float = 1.0e-6     # internal coordinate
-POSIT_THR = 0.01
-STEP_FOR_GENOMS: float = 0.50  # angstromset()
+
+# Thresholds and steps
+POSITION_THRESHOLD = 0.01           # Tolerance for detecting atomic position jumps (in Å)
+SLAB_STEP_SIZE: float = 0.50        # Step size for slab genome generation (in Å)
 
 
-def surfaces(lattice, indices, layers: int, vacuum: float=0.0, orthogonal=True, adsorbates=[]) -> Atoms:
+def surfaces(
+    lattice: Atoms,
+    miller_indices: tuple[int, int, int],
+    num_layers: int,
+    vacuum: float = 0.0,
+    orthogonal: bool = True,
+    adsorbates: list = []
+) -> list[Atoms]:
     """Create surfaces from a given lattice and Miller indices.
 
     lattice: Atoms object or str
@@ -64,111 +69,121 @@ def surfaces(lattice, indices, layers: int, vacuum: float=0.0, orthogonal=True, 
             The origin is the atom specified by `ads_atom_index`.
             The x, y, and z axes are global axes.
     """
-    atoms = lattice
-    atoms = convert_lattice_with_hkl_normal(atoms, *indices)
-    slabs = get_slabs(atoms, layers)
-    surfaces = [slab.to_atoms(adsorbates=adsorbates) for slab in slabs]
-    for surface in surfaces:
-        surface.center(vacuum=vacuum, axis=2)
+    # Transform bulk cell using the Miller indices
+    transformed_bulk = convert_lattice_with_hkl_normal(lattice, *miller_indices)
+
+    # Generate slab configurations
+    slabs = _generate_slabs(transformed_bulk, num_layers)
+
+    # Convert slab objects to ASE Atoms, center them, and orthogonalize if needed
+    surfaces = []
+    for slab in slabs:
+        surface = slab.to_atoms(adsorbates=adsorbates)
         if orthogonal:
-            convert_cell_perpendicular(surface)
-    
+            _make_cell_orthogonal(surface)
+        surface.center(vacuum=vacuum, axis=2)
+        surfaces.append(surface)
+
     return surfaces
 
 
-def get_slabs(lattice: SlabBulk, layers: int):
+def _generate_slabs(bulk: SlabBulk, num_layers: int) -> list[Slab]:
     """
-    Generate a list of Slab objects from a given transformed lattice.
-    Parameters:
-        lattice (SlabBulk): A lattice object containing transformed bulk structure 
-                            and metadata (e.g., transformation vectors).
-        layers (int): Number of atomic layers to include in each slab.
-    Returns:
-        List[Slab]: List of generated slab models with different surface offsets.
+    Generate unique slab configurations.
+
+    Parameters
+    ----------
+    bulk: SlabBulk
+        Transformed bulk structure.
+    num_layers: int
+        Number of atomic layers in slab.
+
+    Returns
+    -------
+    list of Slab
+        Unique slab configurations.
     """
+    slab_thickness = bulk.trans_vec_set[2][2]
+    num_steps = int(slab_thickness / SLAB_STEP_SIZE)
+    unique_genomes = {}
 
-    trans_vec_set = lattice.trans_vec_set
-    nstep = int(trans_vec_set[2][2] / STEP_FOR_GENOMS)
-    slab_genoms = {}
-    for i in range(nstep):
-        offset = i / nstep
-        slab_genom = get_slab_genom(offset, trans_vec_set, lattice.atoms)
-        if slab_genom is not None and slab_genom not in slab_genoms:
-            slab_genoms[slab_genom] = offset
+    for i in range(num_steps):
+        offset = i / num_steps
+        genome = _get_slab_genome(offset, bulk.trans_vec_set, bulk.atoms)
 
-    offsets = list(slab_genoms.values())
-    lattice.setup_bonds()
-    slabs = [lattice.to_slab(offset, layers) for offset in offsets]
+        # Add only unique genomes
+        if genome is not None and genome not in unique_genomes:
+            unique_genomes[genome] = offset
 
-    return slabs
+    bulk.setup_bonds()
+    return [bulk.to_slab(offset, num_layers) for offset in unique_genomes.values()]
 
 
-def get_slab_genom(offset: float, trans_vec_set: np.ndarray, atoms: Atoms):
+def _get_slab_genome(offset: float, cell_vectors: np.ndarray, atoms: Atoms) -> SlabGenom | None:
     """
-    Generate a unique "genome" for a slab structure at a given z-offset.
+    Generate a unique representation (SlabGenom) of a slab by projecting atoms
+    along the surface-normal direction and sorting them.
 
-    The genome represents the vertical arrangement of atoms, used to detect 
-    structurally unique slabs (e.g., for different terminations or shifts).
-
-    Parameters:
-        offset (float): Fractional shift along the z-direction (0.0 to <1.0).
-        trans_vec_set (np.ndarray): 3x3 array of transformed lattice vectors.
-        atoms (ASE_Atoms or similar): Atomic structure to analyze.
-
-    Returns:
-        SlabGenom: An object representing atomic species and their z-ordering.
+    offset: float
+        Fractional offset along the surface normal.
+    cell_vectors : np.ndarray
+        Lattice vectors defining the slab coordinate system.
+    atoms: Atoms
+        Atomic structure.
     """
-
     names = []
-    coords = []
-
-    slab_thickness = trans_vec_set[2][2]
-    iatom = len(atoms)
+    z_coords = []
+    slab_thickness = cell_vectors[2][2]
+    rotate_index = len(atoms)
 
     for idx, atom in enumerate(atoms):
-        # Compute fractional z-coordinate with offset
-        z_frac = atom.get_coord_frac(trans_vec_set)[2] + offset
+        # Get fractional z-coordinate with offset and wrap to [0, 1)
+        z_frac = atom.get_coord_frac(cell_vectors)[2] + offset
         z_frac_wrapped = z_frac % 1.0
 
-        # Correct atoms near the upper boundary (to wrap into lower side)
-        if (1.0 - z_frac_wrapped) * slab_thickness < POSIT_THR:
+        # If atom is close to the top boundary, bring it back into the slab
+        if (1.0 - z_frac_wrapped) * slab_thickness < POSITION_THRESHOLD:
             z_frac_wrapped -= 1.0
 
-        # Identify the "first" atom just below or at the z=0 surface
-        if iatom >= len(atoms):
+        # Select a rotation point to reorder atoms if needed
+        if rotate_index >= len(atoms):
             dz = abs(z_frac - z_frac_wrapped) * slab_thickness
-            if dz < POSIT_THR:
-                iatom = idx
+            if dz < POSITION_THRESHOLD:
+                rotate_index = idx
 
         names.append(atom.element)
-        coords.append(z_frac_wrapped * slab_thickness)
+        z_coords.append(z_frac_wrapped * slab_thickness)
 
-    # Rotate atom list so that atom at iatom comes first
-    names_rot = names[iatom:] + names[:iatom]
-    coords_rot = coords[iatom:] + coords[:iatom]
+    # Rotate atom list so the same atoms appear in the same order
+    names_rot = names[rotate_index:] + names[:rotate_index]
+    z_coords_rot = z_coords[rotate_index:] + z_coords[:rotate_index]
 
-    return SlabGenom(names_rot, coords_rot)
+    return SlabGenom(names_rot, z_coords_rot)
 
 
-def convert_cell_perpendicular(atoms: Atoms) -> None:
-    cell = atoms.get_cell()
-    a_vec = cell[0]
-    b_vec = cell[1]
-    c_vec = cell[2]
+def _make_cell_orthogonal(atoms: Atoms) -> None:
+    """
+    Modify the cell so that the c-vector is perpendicular to the a- and b-vectors.
 
-    new_a = a_vec
-    new_b = b_vec
+    Parameters
+    ----------
+    atoms: Atoms
+        ASE Atoms object with current cell.
+    """
+    a_vec, b_vec, c_vec = atoms.get_cell()
 
-    new_c_dir = np.cross(new_a, new_b)
+    # Calculate new c-vector perpendicular to a and b
+    new_c_dir = np.cross(a_vec, b_vec)
     norm = np.linalg.norm(new_c_dir)
+
     if norm < 1e-8:
-        raise ValueError("a and b vectors are parallel or invalid for cross product")
-    new_c_dir /= norm
+        raise ValueError("Cell vectors a and b are colinear; cannot define surface normal.")
 
-    proj_length = np.dot(c_vec, new_c_dir)
-    new_c = new_c_dir * proj_length
+    new_c_unit = new_c_dir / norm
+    proj_length = np.dot(c_vec, new_c_unit)
+    new_c_vec = new_c_unit * proj_length
 
-    new_cell = np.array([new_a, new_b, new_c])
-
-    atoms.cell = new_cell
-    atoms.set_scaled_positions(atoms.get_scaled_positions()) 
+    # Apply updated orthogonal cell
+    new_cell = np.array([a_vec, b_vec, new_c_vec])
+    atoms.set_cell(new_cell, scale_atoms=False)
+    atoms.set_scaled_positions(atoms.get_scaled_positions())
