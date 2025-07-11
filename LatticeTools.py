@@ -182,15 +182,15 @@ def get_int_vecs(num_intercepts, has_intercepts, intercepts):
     return vectors
 
 
-def get_boundary_box(vector_set: np.ndarray) -> np.ndarray:
+def get_boundary_box(int_vecs: np.ndarray) -> np.ndarray:
     """
     Calculate bounding box min/max per axis from 3 lattice vectors.
     Parameters:
-        vector_set (np.ndarray): 3 Integer vectors
+        int_vecs (np.ndarray): 3 Integer vectors
     Returns:
         np.ndarray: shape (3, 2), min and max per axis
     """
-    vecs_by_axis = vector_set.T
+    vecs_by_axis = int_vecs.T
     bound_box = np.zeros((3, 2), dtype=int)
     bound_box[:, 1] = np.sum(np.where(vecs_by_axis > 0, vecs_by_axis, 0), axis=1)
     bound_box[:, 0] = np.sum(np.where(vecs_by_axis < 0, vecs_by_axis, 0), axis=1)
@@ -199,14 +199,14 @@ def get_boundary_box(vector_set: np.ndarray) -> np.ndarray:
 
 def get_lattice_vecs(
     atoms: ASE_Atoms,
-    vector_set: np.ndarray
+    int_vecs: np.ndarray
 ) -> np.ndarray:
     """
     Calculate the new lattice vectors for the bulk cell after applying
     integer linear combinations of the original lattice vectors.
     Parameters:
         atoms (Atoms): ASE Atoms object containing the original cell.
-        vector_set (np.ndarray): Integer vectors.
+        int_vecs (np.ndarray): Integer vectors.
     Returns:
         np.ndarray: New lattice vectors array with shape (3, 3).
     """
@@ -214,7 +214,7 @@ def get_lattice_vecs(
 
     # Calculate new lattice vectors by multiplying integer matrix by original vectors
     # (integer linear combinations of the original lattice vectors)
-    latt_unit0 = np.dot(vector_set, latt_vecs_bulk)
+    latt_unit0 = np.dot(int_vecs, latt_vecs_bulk)
 
     # Extract lattice constants (lengths and angles) from the new lattice vectors
     latt_consts = get_cell_dm_14(latt_unit0)
@@ -227,7 +227,7 @@ def get_lattice_vecs(
 
 def get_converted_atoms(
     atoms: ASE_Atoms,
-    vector_set: np.ndarray,
+    int_vecs: np.ndarray,
     bound_box: np.ndarray,
     latt_vecs_new: np.ndarray,
 ) -> SlabBulk:
@@ -236,7 +236,7 @@ def get_converted_atoms(
     into a new unit cell defined by transformed lattice vectors.
     Parameters:
         atoms (ASE_Atoms): Original ASE Atoms object.
-        vector_set (np.ndarray): Integer vectors used for the lattice transformation matrix.
+        int_vecs (np.ndarray): Integer vectors used for the lattice transformation matrix.
         bound_box (np.ndarray): 3x2 array of integer boundaries for search range.
         latt_vecs_new (np.ndarray): New lattice vectors of the slab cell.
     Returns:
@@ -250,7 +250,7 @@ def get_converted_atoms(
     inv_latt_vecs_old = np.linalg.inv(atoms.get_cell())
     
     # Inverse of integer transformation matrix
-    inv_latt_int = np.linalg.inv(vector_set)
+    inv_latt_int = np.linalg.inv(int_vecs)
 
     atoms_set = set()
 

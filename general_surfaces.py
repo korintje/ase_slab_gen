@@ -70,6 +70,8 @@ def surfaces(lattice, indices, layers: int, vacuum: float=0.0, orthogonal=True, 
     surfaces = [slab.to_atoms(adsorbates=adsorbates) for slab in slabs]
     for surface in surfaces:
         surface.center(vacuum=vacuum, axis=2)
+        if orthogonal:
+            convert_cell_perpendicular(surface)
     
     return surfaces
 
@@ -146,3 +148,27 @@ def get_slab_genom(offset: float, trans_vec_set: np.ndarray, atoms: Atoms):
     coords_rot = coords[iatom:] + coords[:iatom]
 
     return SlabGenom(names_rot, coords_rot)
+
+
+def convert_cell_perpendicular(atoms: Atoms) -> None:
+    cell = atoms.get_cell()
+    a_vec = cell[0]
+    b_vec = cell[1]
+    c_vec = cell[2]
+
+    new_a = a_vec
+    new_b = b_vec
+
+    new_c_dir = np.cross(new_a, new_b)
+    norm = np.linalg.norm(new_c_dir)
+    if norm < 1e-8:
+        raise ValueError("a and b vectors are parallel or invalid for cross product")
+    new_c_dir /= norm
+
+    proj_length = np.dot(c_vec, new_c_dir)
+    new_c = new_c_dir * proj_length
+
+    new_cell = np.array([new_a, new_b, new_c])
+
+    atoms.cell = new_cell
+    atoms.set_scaled_positions(atoms.get_scaled_positions()) 

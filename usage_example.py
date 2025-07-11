@@ -1,4 +1,5 @@
 from ase import Atoms
+from ase.io import write
 from ase.build import bulk
 import matplotlib.pyplot as plt
 from ase.visualize.plot import plot_atoms
@@ -23,7 +24,7 @@ ads = [
 ]
 
 # Create all possible slabs
-slabs = surfaces(my_bulk, (h, k, l), 4, vacuum=10.0, adsorbates=ads)
+slabs = surfaces(my_bulk, (h, k, l), 4, vacuum=10.0, adsorbates=ads, orthogonal=True)
 
 # Save slab images
 for i, slab in enumerate(slabs):
@@ -33,4 +34,5 @@ for i, slab in enumerate(slabs):
     plot_atoms(ext_slab, axarr[1], rotation=('-90x,0y,0z'))
     plot_atoms(ext_slab, axarr[2], rotation=('-90x,-90y,0z'))
     plot_atoms(ext_slab, axarr[3], rotation=('30x,0y,0z'))
+    write(f"{i}.cif", slab)
     fig.savefig(f"{i}.png")
