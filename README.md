@@ -42,6 +42,9 @@ After cloning, you can import the surfaces function from the general_surfaces mo
 Here is a basic example demonstrating how to generate slabs for a silicon crystal:
 
 ```python
+import sys
+sys.path.append('path/to/ase_slab_gen')  # e.g. './ase_slab_gen'
+
 from ase.build import bulk
 from general_surfaces import surfaces
 
