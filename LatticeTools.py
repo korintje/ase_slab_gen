@@ -515,111 +515,6 @@ def get_lattice_vecs(
     return latt_vecs
 
 
-def setup_lattice(cell: ASE_Atoms, vector1, vector2, vector3):
-
-    latt_int = np.stack([vector1, vector2, vector3])
-    lattice: np.ndarray = cell.cell[:]
-    latt_unit0 = np.dot(latt_int, lattice)
-    latt_const = None if latt_unit0.size == 0 else get_cell_dm_14(latt_unit0)
-    if latt_const is None or len(latt_const) < 6:
-        raise ValueError("Lattice constants are invalid.")
-
-    latt_unit = get_cell_14(latt_const)
-    if latt_unit is None or latt_unit.size == 0 or len(latt_unit) < 3:
-        raise ValueError("Lattice vectors are invalid.")
-    for i in range(3):
-        if latt_unit[i] is None or len(latt_unit[i]) < 3:
-            raise ValueError(f"Lattice vector {i} is invalid.")
-    
-    return latt_unit
-
-
-def setup_unit_atoms_in_slab(
-    cell: ASE_Atoms,
-    vector1: np.ndarray,
-    vector2: np.ndarray,
-    vector3: np.ndarray,
-    bound_box: np.ndarray,
-    latt_unit: np.ndarray
-) -> ASE_Atoms:
-    """
-    Construct atoms within the transformed slab unit cell.
-
-    This function creates a new ASE Atoms object by translating atoms in the
-    original bulk unit cell across the bounding box defined by the integer lattice
-    vectors, and then filtering those atoms that fall within the new unit slab cell.
-
-    Parameters:
-        cell (ASE_Atoms): Original bulk cell.
-        vector1 (np.ndarray): First integer transformation vector.
-        vector2 (np.ndarray): Second integer transformation vector.
-        vector3 (np.ndarray): Third integer transformation vector.
-        bound_box (np.ndarray): Bounding box in integer coordinates (shape: (3, 2)).
-        latt_unit (np.ndarray): New slab lattice vectors (shape: (3, 3)).
-
-    Returns:
-        ASE_Atoms: New Atoms object containing atoms inside the slab unit cell.
-    """
-
-    # Get atomic positions and chemical symbols from the original cell
-    positions = cell.get_positions()
-    symbols = cell.get_chemical_symbols()
-
-    # Get the original lattice vectors and compute its inverse
-    lattice_vecs = cell.get_cell()
-    inv_lattice_vecs = np.linalg.inv(lattice_vecs)
-
-    # Form transformation matrix and its inverse
-    latt_int = np.stack([vector1, vector2, vector3])
-    inv_latt = np.linalg.inv(latt_int)
-
-    # Use a set to avoid duplicate atoms (due to periodicity and tolerance)
-    unit_atoms_set = set()
-
-    # Loop over translation indices in x, y, z directions
-    for ia in range(bound_box[0][0], bound_box[0][1] + 1):
-        for ib in range(bound_box[1][0], bound_box[1][1] + 1):
-            for ic in range(bound_box[2][0], bound_box[2][1] + 1):
-
-                # For each atom in the original unit cell
-                for symbol, position in zip(symbols, positions):
-                    # Convert cartesian position to fractional coordinates (original cell)
-                    abc1 = np.dot(position, inv_lattice_vecs)
-
-                    # Apply translation and transform to new lattice basis
-                    abc2 = np.dot(abc1 + np.array([ia, ib, ic]), inv_latt)
-
-                    # Check if the translated atom is within the unit slab (with tolerance)
-                    if (-PACK_THR <= abc2[0] < 1.0 + PACK_THR and
-                        -PACK_THR <= abc2[1] < 1.0 + PACK_THR and
-                        -PACK_THR <= abc2[2] < 1.0 + PACK_THR):
-
-                        # Wrap coordinates to [0, 1) range (periodic boundary)
-                        shifted_abc = abc2 - np.floor(abc2)
-
-                        # Adjust atoms near the top surface into the cell
-                        dc = 1.0 - shifted_abc[2]
-                        dz = dc * latt_unit[2][2]
-                        if dz < POSIT_THR:
-                            shifted_abc[2] -= 1.0
-
-                        # Create new atom in cartesian coordinates using the new lattice
-                        atom = ASE_Atom(symbol, np.dot(shifted_abc, latt_unit))
-
-                        # Add to set to avoid duplicates
-                        unit_atoms_set.add(atom)
-
-    # Construct the final ASE Atoms object
-    slab_atoms = ASE_Atoms()
-    slab_atoms.set_cell(latt_unit)
-
-    # Append atoms to the new slab cell
-    for atom in unit_atoms_set:
-        slab_atoms.append(atom)
-
-    return slab_atoms
-
-
 def get_converted_atoms(
     atoms: ASE_Atoms,
     vector1: np.ndarray,
@@ -669,13 +564,11 @@ def convert_lattice_with_hkl_normal(
     """
     Convert the orientation of a crystal structure so that the (hkl) plane 
     becomes the top surface, i.e., the surface normal is aligned with [hkl].
-
     Parameters:
         atoms (Atoms): ASE Atoms object representing the bulk crystal.
         h (int): Miller index h.
         k (int): Miller index k.
         l (int): Miller index l.
-
     Returns:
         SlabBulk: New Atoms object with the cell reoriented so that the 
         (hkl) plane is aligned as the surface.
@@ -690,26 +583,10 @@ def convert_lattice_with_hkl_normal(
     if positions.size == 0:
         raise ValueError("Given atoms object is blank.")
 
-    # Calculate intercepts for the (hkl) plane
-    (
-        num_intercept,
-        has_intercept1,
-        has_intercept2,
-        has_intercept3,
-        intercept1,
-        intercept2,
-        intercept3
-    ) = get_intercepts(h, k, l)
-
+    # Calculate intercepts for the (hkl) plane and
     # Generate new basis vectors from the (hkl) intercepts
     vector1, vector2, vector3 = get_vectors(
-        num_intercept,
-        has_intercept1,
-        has_intercept2,
-        has_intercept3,
-        intercept1,
-        intercept2,
-        intercept3
+        *get_intercepts(h, k, l)
     )
 
     # Calculate the bounding box for slicing the cell
@@ -717,20 +594,12 @@ def convert_lattice_with_hkl_normal(
 
     # Determine new lattice vectors for the reoriented cell
     latt_vecs_new = get_lattice_vecs(
-        atoms,
-        vector1,
-        vector2,
-        vector3
+        atoms, vector1, vector2, vector3
     )
 
     # Apply the transformation and extract the rotated slab
     converted_cell = get_converted_atoms(
-        atoms,
-        vector1,
-        vector2,
-        vector3,
-        bound_box,
-        latt_vecs_new
+        atoms, vector1, vector2, vector3, bound_box, latt_vecs_new
     )
 
     return converted_cell

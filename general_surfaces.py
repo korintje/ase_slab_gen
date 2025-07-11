@@ -65,8 +65,7 @@ def surfaces(lattice, indices, layers: int, vacuum: float=0.0, orthogonal=True, 
             The x, y, and z axes are global axes.
     """
     atoms = lattice
-    if orthogonal:
-        atoms = convert_lattice_with_hkl_normal(atoms, *indices)
+    atoms = convert_lattice_with_hkl_normal(atoms, *indices)
     slabs = get_slabs(atoms, layers)
     surfaces = [slab.to_atoms(adsorbates=adsorbates) for slab in slabs]
     for surface in surfaces:
