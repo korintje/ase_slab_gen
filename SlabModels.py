@@ -408,14 +408,6 @@ class Slab():
 
     def to_atoms(self, adsorbates=[]):
 
-        # Example
-        # water = ASE_Atoms([ASE_Atom('H', (0, 0, 1)), ASE_Atom('O', (0, 0, 0)), ASE_Atom('H', (0, 1, 0))])
-        # adsorbates = [
-            # {"adsorbate": "He", "on": "Zn", "bond_length": 1.0},
-            # {"adsorbate": "H", "on": "O", "bond_length": 1.0},
-            # {"adsorbate": water, "on": "O", "ads_atom_index": 1, "bond_length": 1.5},
-        # ]
-
         top_ads_atoms = self.create_ads_atoms(self.top_bonds, adsorbates)
         bottom_ads_atoms = self.create_ads_atoms(self.bottom_bonds, adsorbates)
         all_atoms = self.atoms + top_ads_atoms + bottom_ads_atoms

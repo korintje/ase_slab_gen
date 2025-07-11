@@ -658,10 +658,6 @@ def get_converted_atoms(
                         add_count += 1
                         atoms_set.add(atom)
     
-    # converted_atoms = Atoms()
-    # converted_atoms.set_cell(latt_vecs_new)
-    # for atom in atoms_set:
-    #     converted_atoms.append(atom)
     converted_atoms = SlabBulk(latt_vecs_new, list(atoms_set), [])
 
     return converted_atoms

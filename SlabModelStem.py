@@ -2,7 +2,6 @@ from ase import Atoms as ASE_Atoms
 import numpy as np
 from LatticeTools import get_cell_14, get_cell_dm_14
 from SlabModel import SlabModel
-from Cell import RealLattice, RealAtom
 
 
 class AtomEntry:
@@ -83,16 +82,16 @@ class AtomEntry:
 class SlabModelStem(SlabModel):
 
     DET_THR: float = 1.0e-8
-    PACK_THR: float = 1.0e-6     # internal coordinate
-    OFFSET_THR: float = 1.0e-12  # angstrom
-    THICK_THR: float = 1.0e-12   # angstrom
-    POSIT_THR: float = 1.0e-4    # angstrom
+    PACK_THR: float = 1.0e-6       # internal coordinate
+    OFFSET_THR: float = 1.0e-12    # angstrom
+    THICK_THR: float = 1.0e-12     # angstrom
+    POSIT_THR: float = 1.0e-4      # angstrom
     VALUE_THR: float = 1.0e-12
     STEP_FOR_GENOMS: float = 0.50  # angstrom
     STEP_FOR_CTHICK: float = 0.05  # internal coordinate
     MAX_FOR_CTHICK: int = 20
-    SLAB_FIX_THR: float = 0.1  # angstrom
-    SLAB_FIX_RATE: float = 0.5 # internal coordinate
+    SLAB_FIX_THR: float = 0.1      # angstrom
+    SLAB_FIX_RATE: float = 0.5     # internal coordinate
 
 
     def __init__(self, ase_atoms: ASE_Atoms, h: int, k: int, l: int):
@@ -112,74 +111,6 @@ class SlabModelStem(SlabModel):
         self.entry_auxi = []    # List<AtomEntry>
         self.entry_slab = []    # List<AtomEntry>
 
-    
-    def to_atoms(self, slab_model):
-
-        self.setup_auxi_atoms(slab_model)
-        self.setup_slab_atoms(slab_model)
-        ase_atoms = ASE_Atoms()
-        ase_atoms.set_cell(self.latt_slab)
-        ase_atoms.set_pbc((True, True, False))
-
-        entry_slab = self.entry_slab[:]
-        entry_slab.sort()
-        for entry in entry_slab:
-            ase_atoms.append(entry.name)
-            ase_atoms.positions[-1] = entry.xyz
-
-        return ase_atoms
-
-
-    def setup_slab_atoms(self, slab_model):
-
-        # Prepare slab lattice vectors
-        self.latt_slab = self.latt_unit.copy()
-
-        # Expand slab XY axes
-        a_scale = max(1, slab_model.scaleA)
-        b_scale = max(1, slab_model.scaleB)
-        self.latt_slab[0] = float(a_scale) * self.latt_slab[0]
-        self.latt_slab[1] = float(b_scale) * self.latt_slab[1]
-
-        # Expand slab Z axis
-        z_slab = self.latt_slab[2][2]
-        z_total = self.latt_auxi[2][2] + 2.0 * max(0.0, slab_model.vacuum)
-        z_scale = 1.0 if z_slab == 0.0 else (z_total / z_slab)
-        z_vector = self.latt_slab[2] = z_scale * self.latt_slab[2]
-
-        # Create atoms
-        self.entry_slab = []
-        txyz = 0.5 * (z_vector - self.latt_auxi[2])
-        for ia in range(a_scale):
-            ra = ia / a_scale
-            for ib in range(b_scale):
-                rb = ib / b_scale
-                rs = np.array([ra, rb, 0.0])
-                vxyz = np.dot(rs, self.latt_slab)
-                vxyz[2] = 0.0
-                
-                for entry in self.entry_auxi:
-                    if entry is None:
-                        continue
-                    entry2 = AtomEntry(entry.name, self.latt_slab)
-                    entry2.xyz = entry.xyz + txyz + vxyz 
-                    # if not entry2.xyz_is_in(self.entry_slab):
-                    self.entry_slab.append(entry2)
-
-
-    def setup_auxi_atoms(self, slab_model: SlabModel):
-        
-        auxi_atoms = [RealAtom(entry.name, np.dot(entry.abc, self.latt_unit)) for entry in self.entry_unit]
-        auxi_cell: RealLattice = RealLattice(self.latt_unit, auxi_atoms, [])
-        auxi_cell.setup_bonds()
-        new_atoms, new_latt = auxi_cell.to_slab(slab_model.offset, slab_model.thickness)
-        self.entry_auxi = []
-        for atom in new_atoms:
-            entry = AtomEntry(atom.element, new_latt)
-            entry.xyz = atom.get_coord()
-            self.entry_auxi.append(entry)
-        self.latt_auxi = new_latt
-           
 
     def setup_unit_atoms_in_cell(self, ase_atoms: ASE_Atoms):
 
@@ -189,9 +120,7 @@ class SlabModelStem(SlabModel):
         rec_lattice = np.linalg.inv(lattice_vecs)
         self.entry_unit = []
         for position, name in zip(positions, symbols):
-            # Create atom entry and convert position
             entry = AtomEntry(name, lattice_vecs)
-            # entry.xyz = position
             entry.abc = np.dot(position, rec_lattice)
             self.entry_unit.append(entry)
 
@@ -212,7 +141,6 @@ class SlabModelStem(SlabModel):
                             -SlabModelStem.PACK_THR <= abc[1] < 1.0 + SlabModelStem.PACK_THR and 
                             -SlabModelStem.PACK_THR <= abc[2] < 1.0 + SlabModelStem.PACK_THR):
                             atom = AtomEntry(entry.name, self.latt_unit)
-                            # atom.abc = adjust_atom_positions(abc, SlabModelStem.POSIT_THR, self.latt_unit[2][2])
                             shifted_abc = abc - np.floor(abc)
                             dc = 1.0 - shifted_abc[2]
                             dz = dc * self.latt_unit[2][2]

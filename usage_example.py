@@ -1,9 +1,7 @@
 from ase import Atoms
 from ase.build import bulk
-from ase.io import read
 import matplotlib.pyplot as plt
 from ase.visualize.plot import plot_atoms
-import os
 from general_surfaces import surfaces
 
 # Create a bulk (e.g. ZnO)
