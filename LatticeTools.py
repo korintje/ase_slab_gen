@@ -1,7 +1,7 @@
 import numpy as np
-from ASE import Atoms as ASE_Atoms
-from ASE import Atom as ASE_Atom
-
+from ase import Atoms as ASE_Atoms
+from ase import Atom as ASE_Atom
+from SlabModels import SlabAtom, SlabBulk
 
 BOHR_RADIUS_SI = 0.52917720859E-10 # m
 BOHR_RADIUS_CM = BOHR_RADIUS_SI * 100.0
@@ -101,203 +101,418 @@ def get_cell_14(celldm):
     return lattice_vecs
 
 
-def convert_by_hkl(cell: ASE_Atoms, h: int, k: int, l: int):
+def get_intercepts(h: int, k: int, l: int):
+    """
+    Calculate integer intercepts for the (hkl) Miller plane in a crystal lattice.
+    This function determines the smallest integer scale such that the intercepts
+    along x, y, and z axes become integers.
 
-    if h == 0 and k == 0 and l == 0:
-        raise ValueError("Miller indices [0, 0, 0] is not allowed.")
-    
-    positions: np.ndarray = cell.get_positions()
-    if positions.size == 0:
-        raise ValueError("Given atoms object is blank.")
-    
-    num_intercept, has_intercept1, has_intercept2, has_intercept3, intercept1, intercept2, intercept3 = get_intercepts(h, k, l)
-    vector1, vector2, vector3 = get_vectors(num_intercept, has_intercept1, has_intercept2, has_intercept3, intercept1, intercept2, intercept3)
-    bound_box = get_boundary_box(vector1, vector2, vector3)
-    latt_unit = setup_lattice(cell, vector1, vector2, vector3)
-    converted_cell = setup_unit_atoms_in_slab(cell, vector1, vector2, vector3, bound_box, latt_unit)
+    Parameters:
+        h (int): Miller index h
+        k (int): Miller index k
+        l (int): Miller index l
 
-    return converted_cell
+    Returns:
+        Tuple containing:
+            - num_intercept (int): Number of non-zero Miller indices
+            - has_intercept1 (bool): True if h ≠ 0 (x-axis intercept exists)
+            - has_intercept2 (bool): True if k ≠ 0 (y-axis intercept exists)
+            - has_intercept3 (bool): True if l ≠ 0 (z-axis intercept exists)
+            - intercept1 (int): Integer intercept along x-axis
+            - intercept2 (int): Integer intercept along y-axis
+            - intercept3 (int): Integer intercept along z-axis
+    """
 
-
-def get_intercepts(miller1, miller2, miller3):
+    # Initialize scale range for computing least common multiple (LCM)
     scale_min = 1
     scale_max = 1
     num_intercept = 0
 
-    if miller1 != 0:
-        scale_min = max(scale_min, abs(miller1))
-        scale_max *= abs(miller1)
+    # Check for non-zero h (x-direction intercept)
+    if h != 0:
+        scale_min = max(scale_min, abs(h))
+        scale_max *= abs(h)
         num_intercept += 1
         has_intercept1 = True
     else:
         has_intercept1 = False
 
-    if miller2 != 0:
-        scale_min = max(scale_min, abs(miller2))
-        scale_max *= abs(miller2)
+    # Check for non-zero k (y-direction intercept)
+    if k != 0:
+        scale_min = max(scale_min, abs(k))
+        scale_max *= abs(k)
         num_intercept += 1
         has_intercept2 = True
     else:
         has_intercept2 = False
 
-    if miller3 != 0:
-        scale_min = max(scale_min, abs(miller3))
-        scale_max *= abs(miller3)
+    # Check for non-zero l (z-direction intercept)
+    if l != 0:
+        scale_min = max(scale_min, abs(l))
+        scale_max *= abs(l)
         num_intercept += 1
         has_intercept3 = True
     else:
         has_intercept3 = False
 
-    if scale_min < 1:
-        raise ValueError("scaleMin is not positive.")
-
-    if scale_max < scale_min:
-        raise ValueError("scaleMax < scaleMin.")
-
-    if num_intercept < 1:
-        raise ValueError("there are no intercepts.")
-
+    # Search for the smallest integer scale divisible by all non-zero indices
+    # Equivalent to computing the least common multiple (LCM) of non-zero h, k, l
     scale = 0
     for i in range(scale_min, scale_max + 1):
-        if has_intercept1 and (i % miller1) != 0:
+        if has_intercept1 and (i % h) != 0:
             continue
-        if has_intercept2 and (i % miller2) != 0:
+        if has_intercept2 and (i % k) != 0:
             continue
-        if has_intercept3 and (i % miller3) != 0:
+        if has_intercept3 and (i % l) != 0:
             continue
-
         scale = i
         break
 
-    if scale < 1:
-        raise ValueError("cannot detect scale.")
+    # Compute integer intercepts along each axis based on the scale
+    intercept1 = scale // h if has_intercept1 else 0
+    intercept2 = scale // k if has_intercept2 else 0
+    intercept3 = scale // l if has_intercept3 else 0
 
-    intercept1 = scale // miller1 if has_intercept1 else 0
-    intercept2 = scale // miller2 if has_intercept2 else 0
-    intercept3 = scale // miller3 if has_intercept3 else 0
+    return (
+        num_intercept,
+        has_intercept1,
+        has_intercept2,
+        has_intercept3,
+        intercept1,
+        intercept2,
+        intercept3
+    )
 
-    return num_intercept, has_intercept1, has_intercept2, has_intercept3, intercept1, intercept2, intercept3
 
+def get_vectors(
+    num_intercept: int,
+    has_intercept1: bool,
+    has_intercept2: bool,
+    has_intercept3: bool,
+    intercept1: int,
+    intercept2: int,
+    intercept3: int
+):
+    """
+    Generate three lattice vectors (vector1, vector2, vector3) that span the 
+    transformed unit cell where the (hkl) plane is defined by the provided intercepts.
 
-def get_vectors(num_intercept, has_intercept1, has_intercept2, has_intercept3, intercept1, intercept2, intercept3):
+    Parameters:
+        num_intercept (int): Number of non-zero Miller indices (i.e., plane intercepts).
+        has_intercept1 (bool): True if intercept along x-axis exists (h ≠ 0).
+        has_intercept2 (bool): True if intercept along y-axis exists (k ≠ 0).
+        has_intercept3 (bool): True if intercept along z-axis exists (l ≠ 0).
+        intercept1 (int): Integer intercept along x-axis.
+        intercept2 (int): Integer intercept along y-axis.
+        intercept3 (int): Integer intercept along z-axis.
 
-    vector1: np.ndarray = np.zeros(3, dtype = int)
-    vector2: np.ndarray = np.zeros(3, dtype = int)
-    vector3: np.ndarray = np.zeros(3, dtype = int)
+    Returns:
+        Tuple of np.ndarray:
+            vector1 (np.ndarray): First in-plane vector (along the surface).
+            vector2 (np.ndarray): Second in-plane vector (along the surface).
+            vector3 (np.ndarray): Out-of-plane vector (normal to surface).
+    """
 
+    # Initialize the three vectors as integer arrays of shape (3,)
+    vector1 = np.zeros(3, dtype=int)
+    vector2 = np.zeros(3, dtype=int)
+    vector3 = np.zeros(3, dtype=int)
+
+    # Use specialized logic depending on the number of non-zero intercepts
     if num_intercept <= 1:
-        setup_vectors1(has_intercept1, has_intercept2, has_intercept3, intercept1, intercept2, intercept3, vector1, vector2, vector3)
+        # Special case: plane intersects only one axis
+        # e.g., (1, 0, 0) — simple setup for 1D edge/face plane
+        setup_vectors1(
+            has_intercept1, has_intercept2, has_intercept3,
+            intercept1, intercept2, intercept3,
+            vector1, vector2, vector3
+        )
+
     elif num_intercept <= 2:
-        setup_vectors2(has_intercept1, has_intercept2, has_intercept3, intercept1, intercept2, intercept3, vector1, vector2, vector3)
+        # Intermediate case: plane intersects two axes (edge cuts)
+        # e.g., (1, 1, 0) — diagonal within a face
+        setup_vectors2(
+            has_intercept1, has_intercept2, has_intercept3,
+            intercept1, intercept2, intercept3,
+            vector1, vector2, vector3
+        )
+
     else:
-        setup_vectors3(intercept1, intercept2, intercept3, vector1, vector2, vector3)
-    
+        # General case: plane intersects all three axes
+        # e.g., (1, 1, 1) — full 3D corner cut
+        setup_vectors3(
+            intercept1, intercept2, intercept3,
+            vector1, vector2, vector3
+        )
+
     return vector1, vector2, vector3
 
 
-def setup_vectors1(has_intercept1, has_intercept2, has_intercept3, intercept1, intercept2, intercept3, vector1, vector2, vector3):
+def setup_vectors1(
+    has_intercept1: bool,
+    has_intercept2: bool,
+    has_intercept3: bool,
+    intercept1: int,
+    intercept2: int,
+    intercept3: int,
+    vector1: np.ndarray,
+    vector2: np.ndarray,
+    vector3: np.ndarray
+):
+    """
+    Define lattice vectors when the Miller plane intersects only one axis.
+    This is a special case for (hkl) planes like (1, 0, 0), (0, 1, 0), (0, 0, 1).
+
+    Parameters:
+        has_intercept1 (bool): True if the plane intersects the x-axis (h ≠ 0)
+        has_intercept2 (bool): True if the plane intersects the y-axis (k ≠ 0)
+        has_intercept3 (bool): True if the plane intersects the z-axis (l ≠ 0)
+        intercept1 (int): Integer intercept along the x-axis
+        intercept2 (int): Integer intercept along the y-axis
+        intercept3 (int): Integer intercept along the z-axis
+        vector1 (np.ndarray): Output vector (in-plane direction)
+        vector2 (np.ndarray): Output vector (in-plane direction)
+        vector3 (np.ndarray): Output vector (normal to surface)
+    """
+
+    # Case 1: Plane intersects x-axis only (e.g., (h, 0, 0))
     if has_intercept1:
         if intercept1 > 0:
-            vector1[1] = 1
-            vector2[2] = 1
-            vector3[0] = 1
+            # Positive x-intercept → surface normal points in +x
+            vector1[1] = 1  # y-direction
+            vector2[2] = 1  # z-direction
+            vector3[0] = 1  # x-direction (normal)
         else:
-            vector1[2] = 1
-            vector2[1] = 1
-            vector3[0] = -1
+            # Negative x-intercept → flip x-normal
+            vector1[2] = 1  # z-direction
+            vector2[1] = 1  # y-direction
+            vector3[0] = -1  # -x-direction (normal)
 
+    # Case 2: Plane intersects y-axis only (e.g., (0, k, 0))
     elif has_intercept2:
         if intercept2 > 0:
-            vector1[2] = 1
-            vector2[0] = 1
-            vector3[1] = 1
+            # Positive y-intercept → normal in +y
+            vector1[2] = 1  # z-direction
+            vector2[0] = 1  # x-direction
+            vector3[1] = 1  # y-direction (normal)
         else:
-            vector1[0] = 1
-            vector2[2] = 1
-            vector3[1] = -1
+            # Negative y-intercept → flip y-normal
+            vector1[0] = 1  # x-direction
+            vector2[2] = 1  # z-direction
+            vector3[1] = -1  # -y-direction (normal)
 
+    # Case 3: Plane intersects z-axis only (e.g., (0, 0, l))
     elif has_intercept3:
         if intercept3 > 0:
-            vector1[0] = 1
-            vector2[1] = 1
-            vector3[2] = 1
+            # Positive z-intercept → normal in +z
+            vector1[0] = 1  # x-direction
+            vector2[1] = 1  # y-direction
+            vector3[2] = 1  # z-direction (normal)
         else:
-            vector1[1] = 1
-            vector2[0] = 1
-            vector3[2] = -1
+            # Negative z-intercept → flip z-normal
+            vector1[1] = 1  # y-direction
+            vector2[0] = 1  # x-direction
+            vector3[2] = -1  # -z-direction (normal)
 
 
-def setup_vectors2(has_intercept1, has_intercept2, has_intercept3, intercept1, intercept2, intercept3, vector1, vector2, vector3):
-    if not has_intercept3:  # cat in A-B plane
+def setup_vectors2(
+    has_intercept1: bool,
+    has_intercept2: bool,
+    has_intercept3: bool,
+    intercept1: int,
+    intercept2: int,
+    intercept3: int,
+    vector1: np.ndarray,
+    vector2: np.ndarray,
+    vector3: np.ndarray
+):
+    """
+    Define lattice vectors when the Miller plane intersects exactly two axes.
+    This includes planes like (1,1,0), (1,0,1), or (0,1,1).
+
+    Parameters:
+        has_intercept1 (bool): True if h ≠ 0 (x-axis intercept exists)
+        has_intercept2 (bool): True if k ≠ 0 (y-axis intercept exists)
+        has_intercept3 (bool): True if l ≠ 0 (z-axis intercept exists)
+        intercept1 (int): Integer intercept along x-axis
+        intercept2 (int): Integer intercept along y-axis
+        intercept3 (int): Integer intercept along z-axis
+        vector1 (np.ndarray): Output vector (in-plane direction)
+        vector2 (np.ndarray): Output vector (in-plane direction)
+        vector3 (np.ndarray): Output vector (normal to surface)
+    """
+
+    # Case: Plane lies in x-y plane (intercepts x and y only)
+    if not has_intercept3:
         sign1 = int((intercept1 > 0) - (intercept1 < 0))
         sign2 = int((intercept2 > 0) - (intercept2 < 0))
-        vector1[2] = sign1 * sign2
-        vector2[0] = intercept1
-        vector2[1] = -intercept2
-        vector3[0] = sign1
-        vector3[1] = sign2
 
-    elif not has_intercept2:  # cat in A-C plane
+        # In-plane vector perpendicular to (h,k,0)
+        vector1[2] = sign1 * sign2  # z direction (out of plane)
+        vector2[0] = intercept1     # x component of second in-plane vector
+        vector2[1] = -intercept2    # y component with opposite sign
+        vector3[0] = sign1          # x component of surface normal
+        vector3[1] = sign2          # y component of surface normal
+
+    # Case: Plane lies in x-z plane (intercepts x and z only)
+    elif not has_intercept2:
         sign1 = int((intercept1 > 0) - (intercept1 < 0))
         sign3 = int((intercept3 > 0) - (intercept3 < 0))
-        vector1[1] = sign1 * sign3
-        vector2[0] = -intercept1
-        vector2[2] = intercept3
-        vector3[0] = sign1
-        vector3[2] = sign3
 
-    elif not has_intercept1:  # cat in B-C plane
+        # In-plane vector perpendicular to (h,0,l)
+        vector1[1] = sign1 * sign3  # y direction (out of plane)
+        vector2[0] = -intercept1    # x component
+        vector2[2] = intercept3     # z component
+        vector3[0] = sign1          # x component of surface normal
+        vector3[2] = sign3          # z component of surface normal
+
+    # Case: Plane lies in y-z plane (intercepts y and z only)
+    elif not has_intercept1:
         sign2 = int((intercept2 > 0) - (intercept2 < 0))
         sign3 = int((intercept3 > 0) - (intercept3 < 0))
-        vector1[0] = sign2 * sign3
-        vector2[1] = intercept2
-        vector2[2] = -intercept3
-        vector3[1] = sign2
-        vector3[2] = sign3
+
+        # In-plane vector perpendicular to (0,k,l)
+        vector1[0] = sign2 * sign3  # x direction (out of plane)
+        vector2[1] = intercept2     # y component
+        vector2[2] = -intercept3    # z component
+        vector3[1] = sign2          # y component of surface normal
+        vector3[2] = sign3          # z component of surface normal
 
 
-def setup_vectors3(intercept1, intercept2, intercept3, vector1, vector2, vector3):
+def setup_vectors3(
+    intercept1: int,
+    intercept2: int,
+    intercept3: int,
+    vector1: np.ndarray,
+    vector2: np.ndarray,
+    vector3: np.ndarray,
+):
+    """
+    Define lattice vectors when the Miller plane intersects all three axes.
+    This is the general case for (hkl) planes such as (1,1,1).
+
+    Parameters:
+        intercept1 (int): Integer intercept along the x-axis
+        intercept2 (int): Integer intercept along the y-axis
+        intercept3 (int): Integer intercept along the z-axis
+        vector1 (np.ndarray): Output vector (in-plane direction)
+        vector2 (np.ndarray): Output vector (in-plane direction)
+        vector3 (np.ndarray): Output vector (normal to surface)
+    """
+
+    # Determine the signs of each intercept (+1, -1, or 0)
     sign1 = (intercept1 > 0) - (intercept1 < 0)
     sign2 = (intercept2 > 0) - (intercept2 < 0)
     sign3 = (intercept3 > 0) - (intercept3 < 0)
 
+    # Choose in-plane vectors based on the direction of the z-axis intercept
     if sign3 > 0:
-        vector1[1] = sign1 * intercept2
-        vector1[2] = -sign1 * intercept3
-        vector2[0] = -sign2 * intercept1
-        vector2[2] = sign2 * intercept3
+        # If z-intercept is positive, orient vectors to preserve right-handed system
+        vector1[1] = sign1 * intercept2   # y-component of vector1
+        vector1[2] = -sign1 * intercept3  # z-component of vector1
+        vector2[0] = -sign2 * intercept1  # x-component of vector2
+        vector2[2] = sign2 * intercept3   # z-component of vector2
     else:
-        vector1[0] = -sign1 * intercept1
-        vector1[2] = sign1 * intercept3
-        vector2[1] = sign2 * intercept2
-        vector2[2] = -sign2 * intercept3
+        # If z-intercept is zero or negative, use a different basis to avoid degeneracy
+        vector1[0] = -sign1 * intercept1  # x-component of vector1
+        vector1[2] = sign1 * intercept3   # z-component of vector1
+        vector2[1] = sign2 * intercept2   # y-component of vector2
+        vector2[2] = -sign2 * intercept3  # z-component of vector2
 
-    vector3[0] = sign1
-    vector3[1] = sign2
-    vector3[2] = sign3
+    # Out-of-plane vector: normal to the (hkl) plane
+    vector3[0] = sign1  # x-direction
+    vector3[1] = sign2  # y-direction
+    vector3[2] = sign3  # z-direction
 
 
-def get_boundary_box(vector1, vector2, vector3):
+def get_boundary_box(
+    vector1: np.ndarray,
+    vector2: np.ndarray,
+    vector3: np.ndarray
+) -> np.ndarray:
+    """
+    Calculate the bounding box limits along each Cartesian axis based on
+    the three lattice vectors defining a unit cell.
 
-    bound_box = [[0, 0] for _ in range(3)]
+    The bounding box is represented as a (3, 2) array, where each row
+    corresponds to an axis (x, y, z), and the two columns represent the
+    minimum and maximum coordinate extents respectively.
 
+    Parameters:
+        vector1 (np.ndarray): First lattice vector (length 3)
+        vector2 (np.ndarray): Second lattice vector (length 3)
+        vector3 (np.ndarray): Third lattice vector (length 3)
+
+    Returns:
+        np.ndarray: Bounding box array of shape (3, 2),
+                    with min and max values along each axis.
+    """
+
+    # Initialize bounding box array with zeros:
+    # Each row for x,y,z axes; columns: [min, max]
+    bound_box = np.zeros((3, 2), dtype=int)
+
+    # Iterate over x,y,z components (indices 0,1,2)
     for i in range(3):
+        # For each vector, add negative components to min bound,
+        # positive components to max bound.
+
+        # vector1 component
         if vector1[i] < 0:
             bound_box[i][0] += vector1[i]
         else:
             bound_box[i][1] += vector1[i]
 
+        # vector2 component
         if vector2[i] < 0:
             bound_box[i][0] += vector2[i]
         else:
             bound_box[i][1] += vector2[i]
 
+        # vector3 component
         if vector3[i] < 0:
             bound_box[i][0] += vector3[i]
         else:
             bound_box[i][1] += vector3[i]
-    
+
     return bound_box
+
+
+def get_lattice_vecs(
+    atoms: ASE_Atoms,
+    vector1: np.ndarray,
+    vector2: np.ndarray,
+    vector3: np.ndarray
+) -> np.ndarray:
+    """
+    Calculate the new lattice vectors for the bulk cell after applying
+    integer linear combinations of the original lattice vectors.
+
+    Parameters:
+        atoms (Atoms): ASE Atoms object containing the original cell.
+        vector1 (np.ndarray): First integer vector (length 3).
+        vector2 (np.ndarray): Second integer vector (length 3).
+        vector3 (np.ndarray): Third integer vector (length 3).
+
+    Returns:
+        np.ndarray: New lattice vectors array with shape (3, 3).
+    """
+
+    # Extract the original lattice vectors from the Atoms object
+    latt_vecs_bulk = atoms.cell[:]
+
+    # Calculate new lattice vectors by multiplying integer matrix by original vectors
+    # (integer linear combinations of the original lattice vectors)
+    latt_int = np.stack([vector1, vector2, vector3])
+    latt_unit0 = np.dot(latt_int, latt_vecs_bulk)
+
+    # Extract lattice constants (lengths and angles) from the new lattice vectors
+    latt_consts = get_cell_dm_14(latt_unit0)
+
+    # Reconstruct lattice vectors from lattice constants to ensure consistent cell format
+    latt_vecs = get_cell_14(latt_consts)
+
+    return latt_vecs
 
 
 def setup_lattice(cell: ASE_Atoms, vector1, vector2, vector3):
@@ -319,37 +534,207 @@ def setup_lattice(cell: ASE_Atoms, vector1, vector2, vector3):
     return latt_unit
 
 
-def setup_unit_atoms_in_slab(cell, vector1, vector2, vector3, bound_box, latt_unit):
+def setup_unit_atoms_in_slab(
+    cell: ASE_Atoms,
+    vector1: np.ndarray,
+    vector2: np.ndarray,
+    vector3: np.ndarray,
+    bound_box: np.ndarray,
+    latt_unit: np.ndarray
+) -> ASE_Atoms:
+    """
+    Construct atoms within the transformed slab unit cell.
 
-    positions: np.ndarray = cell.get_positions()
-    symbols: np.ndarray = cell.get_chemical_symbols()
-    lattice_vecs: np.ndarray = cell.get_cell()
+    This function creates a new ASE Atoms object by translating atoms in the
+    original bulk unit cell across the bounding box defined by the integer lattice
+    vectors, and then filtering those atoms that fall within the new unit slab cell.
+
+    Parameters:
+        cell (ASE_Atoms): Original bulk cell.
+        vector1 (np.ndarray): First integer transformation vector.
+        vector2 (np.ndarray): Second integer transformation vector.
+        vector3 (np.ndarray): Third integer transformation vector.
+        bound_box (np.ndarray): Bounding box in integer coordinates (shape: (3, 2)).
+        latt_unit (np.ndarray): New slab lattice vectors (shape: (3, 3)).
+
+    Returns:
+        ASE_Atoms: New Atoms object containing atoms inside the slab unit cell.
+    """
+
+    # Get atomic positions and chemical symbols from the original cell
+    positions = cell.get_positions()
+    symbols = cell.get_chemical_symbols()
+
+    # Get the original lattice vectors and compute its inverse
+    lattice_vecs = cell.get_cell()
     inv_lattice_vecs = np.linalg.inv(lattice_vecs)
 
+    # Form transformation matrix and its inverse
     latt_int = np.stack([vector1, vector2, vector3])
     inv_latt = np.linalg.inv(latt_int)
 
+    # Use a set to avoid duplicate atoms (due to periodicity and tolerance)
     unit_atoms_set = set()
+
+    # Loop over translation indices in x, y, z directions
+    for ia in range(bound_box[0][0], bound_box[0][1] + 1):
+        for ib in range(bound_box[1][0], bound_box[1][1] + 1):
+            for ic in range(bound_box[2][0], bound_box[2][1] + 1):
+
+                # For each atom in the original unit cell
+                for symbol, position in zip(symbols, positions):
+                    # Convert cartesian position to fractional coordinates (original cell)
+                    abc1 = np.dot(position, inv_lattice_vecs)
+
+                    # Apply translation and transform to new lattice basis
+                    abc2 = np.dot(abc1 + np.array([ia, ib, ic]), inv_latt)
+
+                    # Check if the translated atom is within the unit slab (with tolerance)
+                    if (-PACK_THR <= abc2[0] < 1.0 + PACK_THR and
+                        -PACK_THR <= abc2[1] < 1.0 + PACK_THR and
+                        -PACK_THR <= abc2[2] < 1.0 + PACK_THR):
+
+                        # Wrap coordinates to [0, 1) range (periodic boundary)
+                        shifted_abc = abc2 - np.floor(abc2)
+
+                        # Adjust atoms near the top surface into the cell
+                        dc = 1.0 - shifted_abc[2]
+                        dz = dc * latt_unit[2][2]
+                        if dz < POSIT_THR:
+                            shifted_abc[2] -= 1.0
+
+                        # Create new atom in cartesian coordinates using the new lattice
+                        atom = ASE_Atom(symbol, np.dot(shifted_abc, latt_unit))
+
+                        # Add to set to avoid duplicates
+                        unit_atoms_set.add(atom)
+
+    # Construct the final ASE Atoms object
+    slab_atoms = ASE_Atoms()
+    slab_atoms.set_cell(latt_unit)
+
+    # Append atoms to the new slab cell
+    for atom in unit_atoms_set:
+        slab_atoms.append(atom)
+
+    return slab_atoms
+
+
+def get_converted_atoms(
+    atoms: ASE_Atoms,
+    vector1: np.ndarray,
+    vector2: np.ndarray,
+    vector3: np.ndarray,
+    bound_box: np.ndarray,
+    latt_vecs_new: np.ndarray,
+) -> SlabBulk:
+
+    positions = atoms.get_positions()
+    symbols = atoms.get_chemical_symbols()
+    inv_latt_vecs_old = np.linalg.inv(atoms.get_cell())
+    inv_latt_int = np.linalg.inv(
+        np.stack([vector1, vector2, vector3])
+    )
+
+    atoms_set = set()
+
+    add_count = 0
+    
     for ia in range(bound_box[0][0], bound_box[0][1] + 1):
         for ib in range(bound_box[1][0], bound_box[1][1] + 1):
             for ic in range(bound_box[2][0], bound_box[2][1] + 1):
                 for symbol, position in zip(symbols, positions):
-                    abc1 = np.dot(position, inv_lattice_vecs)
-                    abc2 = np.dot(abc1 + np.array([ia, ib, ic]), inv_latt)
+                    abc1 = np.dot(position, inv_latt_vecs_old)
+                    abc2 = np.dot(abc1 + np.array([ia, ib, ic]), inv_latt_int)
                     if (-PACK_THR <= abc2[0] < 1.0 + PACK_THR and 
                         -PACK_THR <= abc2[1] < 1.0 + PACK_THR and 
                         -PACK_THR <= abc2[2] < 1.0 + PACK_THR):
                         shifted_abc = abc2 - np.floor(abc2)
                         dc = 1.0 - shifted_abc[2]
-                        dz = dc * latt_unit[2][2]
+                        dz = dc * latt_vecs_new[2][2]
                         if dz < POSIT_THR:
                             shifted_abc[2] -= 1.0
-                        atom = ASE_Atom(symbol, np.dot(shifted_abc, latt_unit))
-                        unit_atoms_set.add(atom)
+                        atom = SlabAtom(symbol, np.dot(shifted_abc, latt_vecs_new))
+                        add_count += 1
+                        atoms_set.add(atom)
     
-    slab_atoms = ASE_Atoms()
-    slab_atoms.set_cell(latt_unit)
-    for atom in unit_atoms_set:
-        slab_atoms.append(atom)
+    # converted_atoms = Atoms()
+    # converted_atoms.set_cell(latt_vecs_new)
+    # for atom in atoms_set:
+    #     converted_atoms.append(atom)
+    converted_atoms = SlabBulk(latt_vecs_new, list(atoms_set), [])
 
-    return slab_atoms
+    return converted_atoms
+
+
+def convert_lattice_with_hkl_normal(
+    atoms: ASE_Atoms, h: int, k: int, l: int
+) -> SlabBulk:
+    """
+    Convert the orientation of a crystal structure so that the (hkl) plane 
+    becomes the top surface, i.e., the surface normal is aligned with [hkl].
+
+    Parameters:
+        atoms (Atoms): ASE Atoms object representing the bulk crystal.
+        h (int): Miller index h.
+        k (int): Miller index k.
+        l (int): Miller index l.
+
+    Returns:
+        SlabBulk: New Atoms object with the cell reoriented so that the 
+        (hkl) plane is aligned as the surface.
+    """
+
+    # Validate Miller indices
+    if h == 0 and k == 0 and l == 0:
+        raise ValueError("Miller indices [0, 0, 0] are not allowed.")
+
+    # Validate that the atoms object is not empty
+    positions: np.ndarray = atoms.get_positions()
+    if positions.size == 0:
+        raise ValueError("Given atoms object is blank.")
+
+    # Calculate intercepts for the (hkl) plane
+    (
+        num_intercept,
+        has_intercept1,
+        has_intercept2,
+        has_intercept3,
+        intercept1,
+        intercept2,
+        intercept3
+    ) = get_intercepts(h, k, l)
+
+    # Generate new basis vectors from the (hkl) intercepts
+    vector1, vector2, vector3 = get_vectors(
+        num_intercept,
+        has_intercept1,
+        has_intercept2,
+        has_intercept3,
+        intercept1,
+        intercept2,
+        intercept3
+    )
+
+    # Calculate the bounding box for slicing the cell
+    bound_box = get_boundary_box(vector1, vector2, vector3)
+
+    # Determine new lattice vectors for the reoriented cell
+    latt_vecs_new = get_lattice_vecs(
+        atoms,
+        vector1,
+        vector2,
+        vector3
+    )
+
+    # Apply the transformation and extract the rotated slab
+    converted_cell = get_converted_atoms(
+        atoms,
+        vector1,
+        vector2,
+        vector3,
+        bound_box,
+        latt_vecs_new
+    )
+
+    return converted_cell

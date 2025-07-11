@@ -1,9 +1,7 @@
 from ase import Atoms as ASE_Atoms
 import numpy as np
-from Lattice import get_cell_14, get_cell_dm_14
-from SlabGenom import SlabGenom
+from LatticeTools import get_cell_14, get_cell_dm_14
 from SlabModel import SlabModel
-from SlabModelLeaf import SlabModelLeaf
 from Cell import RealLattice, RealAtom
 
 
@@ -11,14 +9,12 @@ class AtomEntry:
     
     POSIT_THR = 0.01
 
-
     def __init__(self, name, lattice_vecs: np.ndarray):
 
         self.lattice: np.ndarray = lattice_vecs
         self.name: str = name
         self.abc: np.ndarray = np.zeros(3, dtype = float)
         self.xyz: np.ndarray = np.zeros(3, dtype = float)
-
 
     def __lt__(self, other):
         return self._compare_to_static(self, other) < 0
@@ -29,10 +25,8 @@ class AtomEntry:
             return self._equals_static(self, other)
         return False
 
-
     def __hash__(self):
         return hash(self.name)
-
 
     @staticmethod
     def _compare_to_static(entry1, entry2):
@@ -118,62 +112,6 @@ class SlabModelStem(SlabModel):
         self.entry_auxi = []    # List<AtomEntry>
         self.entry_slab = []    # List<AtomEntry>
 
-
-    def get_slab_models(self):
-
-        nstep = int(self.latt_unit[2][2] / self.STEP_FOR_GENOMS)
-        slab_genoms = {}
-
-        for i in range(nstep):
-            offset = i / nstep
-            slab_genom = self.get_slab_genom(offset)
-            if slab_genom is not None and slab_genom not in slab_genoms:
-                slab_genoms[slab_genom] = offset
-
-        slab_models = [SlabModelLeaf(self, offset) for offset in slab_genoms.values()]
-
-        return slab_models
-
-
-    def get_slab_genom(self, offset):
-
-        if self.latt_unit is None or len(self.latt_unit) < 3:
-            return None
-        if self.latt_unit[2] is None or len(self.latt_unit[2]) < 3:
-            return None
-        if not self.entry_unit:
-            return None
-
-        natom = len(self.entry_unit)
-        iatom = natom
-
-        names = []
-        coords = []
-
-        for entry in self.entry_unit:
-            if entry is None:
-                return None
-
-            c1 = entry.abc[2] + offset
-            c2 = c1 - int(c1)
-
-            dc = abs(c2 - 1.0)
-            dz = dc * self.latt_unit[2][2]
-            if dz < self.POSIT_THR:
-                c2 -= 1.0
-
-            dz = abs(c1 - c2) * self.latt_unit[2][2]
-            if iatom >= natom and dz < self.POSIT_THR:
-                iatom = self.entry_unit.index(entry)
-
-            names.append(entry.name)
-            coords.append(c2 * self.latt_unit[2][2])   
-
-        names2 = names[iatom:] + names[:iatom]
-        coords2 = coords[iatom:] + coords[:iatom]
-
-        return SlabGenom(names2, coords2)
-        
     
     def to_atoms(self, slab_model):
 
