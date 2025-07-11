@@ -83,7 +83,7 @@ def get_slabs(lattice: SlabBulk, layers: int):
                             and metadata (e.g., transformation vectors).
         layers (int): Number of atomic layers to include in each slab.
     Returns:
-        List[SlabModel]: List of generated slab models with different surface offsets.
+        List[Slab]: List of generated slab models with different surface offsets.
     """
 
     trans_vec_set = lattice.trans_vec_set

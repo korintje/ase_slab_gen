@@ -6,7 +6,7 @@ from SlabModels import SlabAtom, SlabBulk
 BOHR_RADIUS_SI = 0.52917720859E-10 # m
 BOHR_RADIUS_CM = BOHR_RADIUS_SI * 100.0
 BOHR_RADIUS_ANGS = BOHR_RADIUS_CM * 1.0E8
-PACK_THR: float = 1.0e-6     # internal coordinate
+PACK_THR: float = 1.0e-6 # internal coordinate
 POSIT_THR = 0.01
 
 

@@ -1,7 +1,6 @@
 from ase import Atoms as ASE_Atoms
 import numpy as np
 from LatticeTools import get_cell_14, get_cell_dm_14
-from SlabModel import SlabModel
 
 
 class AtomEntry:
@@ -79,7 +78,7 @@ class AtomEntry:
         return rr <= AtomEntry.POSIT_THR ** 2
 
 
-class SlabModelStem(SlabModel):
+class SlabModelStem():
 
     DET_THR: float = 1.0e-8
     PACK_THR: float = 1.0e-6       # internal coordinate

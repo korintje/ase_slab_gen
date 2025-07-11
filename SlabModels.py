@@ -7,10 +7,10 @@ COEFFS = (0.0, 1.0, -1.0)
 BOUND_BOXES = np.array(tuple(product(COEFFS, COEFFS, COEFFS)))
 SCALE_FACTOR = 1.4
 MAX_FOR_CTHICK: int = 20
-POSIT_THR: float = 1.0e-4    # angstrom
+POSIT_THR: float = 1.0e-4      # angstrom
 STEP_FOR_CTHICK: float = 0.05  # internal coordinate
 VEC_FACTOR: float = 1.0e-4
-THICK_THR: float = 1.0e-12   # angstrom
+THICK_THR: float = 1.0e-12     # angstrom
 
 
 class SlabBond():
@@ -220,10 +220,7 @@ class SlabBulk():
         for vbond in virtual_bonds:
             if vbond.distance < thr_distance:
                 self.bonds.append(vbond)
-        
-        # for i, bond in enumerate(self.bonds):
-        #     print(f"Bond {i}: from {bond.tail_element} {bond.get_tail_coord_frac(self.trans_vec_set)} to {bond.head_element} {bond.get_head_coord_frac(self.trans_vec_set)}.")
-
+ 
     
     def to_slab(self, offset: float, thickness: int):
 
@@ -385,12 +382,6 @@ class SlabBulk():
                             bond.distance,
                         )
                     )
-                    
-        # for i, bond in enumerate(top_bonds):
-        #     print(f"top bond {i}: from {bond.tail_element} {bond.get_tail_coord_frac(self.trans_vec_set)} to {bond.head_element} {bond.get_head_coord_frac(self.trans_vec_set)}.")
-
-        # for i, bond in enumerate(bottom_bonds):
-        #     print(f"bottom bond {i}: from {bond.tail_element} {bond.get_tail_coord_frac(self.trans_vec_set)} to {bond.head_element} {bond.get_head_coord_frac(self.trans_vec_set)}.")
         
         return top_bonds, bottom_bonds
 
