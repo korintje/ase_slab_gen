@@ -11,6 +11,7 @@ Standard ASE slab generation tools are useful but have limitations, especially w
 Although ASE provides basic tools for generating crystal slabs, users may encounter several issues:
 
 - **Incomplete Surface Enumeration**: ASE may not generate all symmetry-inequivalent surface terminations for a given Miller index.
+- **Cannot use primitive cells**: ASE's surface() function can only use conventional cells, not primitive cells.
 - **Unstable or Unphysical Slabs**: The resulting slabs may sometimes be chemically or structurally unstable.
 - **Manual Adsorbate Placement**: Accurately placing adsorbates on arbitrary surfaces often requires tedious manual adjustments, especially for non-standard structures.
 
@@ -19,6 +20,7 @@ Although ASE provides basic tools for generating crystal slabs, users may encoun
 This improved slab generator addresses the above issues by:
 
 - **Systematically Enumerating All Terminations**: For a given Miller index, the tool generates all symmetry-inequivalent slab terminations that are physically meaningful.
+- **Primitive cells available**: Both the conventional cells and primitive cells can be used in the `surfaces()` function.
 - **Handling Complex Structures**: Robust support for arbitrary bulk structures beyond simple fcc, bcc, or hcp types.
 - **Flexible Adsorbate Support**: Allows better control over adsorbate positioning.
 
