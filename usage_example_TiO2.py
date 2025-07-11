@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from ase.visualize.plot import plot_atoms
 from general_surfaces import surfaces
 from ase.spacegroup import crystal
+from ase.build import bulk
 
 a = 4.6
 c = 2.95
@@ -15,8 +16,11 @@ my_bulk = crystal(
     cellpar=[a, a, c, 90, 90, 90],
 )
 
+# 1. Create a bulk silicon crystal
+my_bulk = bulk('Si', 'diamond', a=5.43)
+
 # Set hkl indices
-h, k, l = 0, 0, 1
+h, k, l = 1, 1, 1
 
 # Create all possible slabs
 slabs = surfaces(my_bulk, (h, k, l), 4, vacuum=10.0, adsorbates=[], orthogonal=True)

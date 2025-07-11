@@ -6,8 +6,8 @@ from LatticeTools import convert_lattice_with_hkl_normal
 
 
 # Thresholds and steps
-POSITION_THRESHOLD = 0.01           # Tolerance for detecting atomic position jumps (in Å)
-SLAB_STEP_SIZE: float = 0.50        # Step size for slab genome generation (in Å)
+POSITION_THRESHOLD = 0.01    # Tolerance for detecting atomic position jumps (in Å)
+SLAB_STEP_SIZE: float = 0.50 # Step size for slab genome generation (in Å)
 
 
 def surfaces(
@@ -34,20 +34,7 @@ def surfaces(
     orthogonal: bool
         Whether the lattice will be converted to that whose upper plane is 
         perpendicular to the normal vector specified by h, k, l
-    adsorbates: adsorbates mapping list or str
-        list of adsorbates mapping formatted as below:
-        hydroxyl = Atoms()
-        [
-            {"adsorbate": "H", "on": "O", "bond_length": 1.0},
-            {
-                "adsorbate": hydroxyl, 
-                "on": "Zn", 
-                "bond_length": 1.5, 
-                "ads_atom_index": 0,
-                "rotation_top": (90.0, 45.0, 0.0),
-                "rotation_bottom": (0.0, 45.0, 0.0),
-            },
-        ]
+    adsorbates: list of adsorbates mapping formatted as below:
         adsorbate (necessary): str or Atom object or Atoms object
             Adsorbate atom (molecule) object or its symbol
         on (necessary): str
@@ -55,18 +42,10 @@ def surfaces(
         bond_length (optional): float
             Bond length between the adsorbate and the surface atom. If not specified,
             bond length of the dangling bond from the surface atom should have in the 
-            bulk cell will be applied. .
+            bulk cell will be applied.
         ads_atom_index (optional): int
             Index of the atom in Atoms object which will be bounded with the surface atom.
-            If not specified, index 0 is used  by default.
-        rotation_top (optional): tuple of three float
-            Rotational angle (degree) around x, y, and z axes for the top-surface adsorbates. 
-            The origin is the atom specified by `ads_atom_index`.
-            The x, y, and z axes are global axes.
-        rotation_bottom (optional): tuple of three float
-            Rotational angle (degree) around x, y, and z axes for the top-surface adsorbates.
-            The origin is the atom specified by `ads_atom_index`.
-            The x, y, and z axes are global axes.
+            If not specified, index 0 is used by default.
     """
     # Transform bulk cell using the Miller indices
     transformed_bulk = convert_lattice_with_hkl_normal(lattice, *miller_indices)
@@ -89,14 +68,10 @@ def surfaces(
 def _generate_slabs(bulk: SlabBulk, num_layers: int) -> list[Slab]:
     """
     Generate unique slab configurations.
-
-    Parameters
-    ----------
     bulk: SlabBulk
         Transformed bulk structure.
     num_layers: int
         Number of atomic layers in slab.
-
     Returns
     -------
     list of Slab
@@ -122,7 +97,6 @@ def _get_slab_genome(offset: float, cell_vectors: np.ndarray, atoms: Atoms) -> S
     """
     Generate a unique representation (SlabGenom) of a slab by projecting atoms
     along the surface-normal direction and sorting them.
-
     offset: float
         Fractional offset along the surface normal.
     cell_vectors : np.ndarray
@@ -162,12 +136,8 @@ def _get_slab_genome(offset: float, cell_vectors: np.ndarray, atoms: Atoms) -> S
 
 def _make_cell_orthogonal(atoms: Atoms) -> None:
     """
-    Modify the cell so that the c-vector is perpendicular to the a- and b-vectors.
-
-    Parameters
-    ----------
-    atoms: Atoms
-        ASE Atoms object with current cell.
+    Modify the cell so that the c-vector is perpendicular to the other vectors.
+    atoms: ASE Atoms object with current cell.
     """
     a_vec, b_vec, c_vec = atoms.get_cell()
 
@@ -176,7 +146,7 @@ def _make_cell_orthogonal(atoms: Atoms) -> None:
     norm = np.linalg.norm(new_c_dir)
 
     if norm < 1e-8:
-        raise ValueError("Cell vectors a and b are colinear; cannot define surface normal.")
+        raise ValueError("Cell vectors a and b are colinear.")
 
     new_c_unit = new_c_dir / norm
     proj_length = np.dot(c_vec, new_c_unit)

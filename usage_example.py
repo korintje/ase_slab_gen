@@ -12,7 +12,7 @@ my_bulk = bulk("OZn", crystalstructure="wurtzite", a=3.289, b=3.289, c=5.307, al
 h, k, l = 1, 0, 0
 
 # Define adsorbates
-hydroxyl = Atoms('OH', positions=[[0, 0, 0], [0.96, 0, 0]])
+hydroxyl = Atoms('OH', positions=[[0, 0, 0], [0, 0, 0.96]])
 ads = [
     {"adsorbate": "H", "on": "O", "bond_length": 1.0},
     {
