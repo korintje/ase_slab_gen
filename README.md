@@ -2,12 +2,12 @@
 
 This repository provides an enhanced tool for generating crystal slabs for atomic simulations, improving upon the standard slab generation features available in the [Atomic Simulation Environment (ASE)](https://wiki.fysik.dtu.dk/ase/).
 
-## Limitations of Standard ASE Slab Tools
+## Limitations of Standard ASE Slab Tool
 
-Although ASE provides basic tools for generating crystal slabs, users may encounter several issues:
+Although ASE provides basic function `surface()` for generating crystal slabs, users may encounter several issues:
 
-- **Cannot use primitive cells**: ASE's `surface()` function can only use conventional cells, not primitive cells.
-- **Incomplete Surface Enumeration**: Although multiple slab structures can theoretically exist for a given cleavage plane specified by Miller indices (hkl), the standard ASE slab generator always returns only a single structure.
+- **Cannot use primitive cells**: `surface()` can only use conventional cells, not primitive cells.
+- **Incomplete Surface Enumeration**: Although multiple slab structures can theoretically exist for a given cleavage plane specified by Miller indices (hkl), the `surface()` always returns only a single structure.
 - **Manual Adsorbate Placement**: Accurately placing adsorbates on arbitrary surfaces often requires tedious manual adjustments, excepting some special structures.
 
 ## What This Tool Offers
