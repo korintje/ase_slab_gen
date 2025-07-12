@@ -1,13 +1,4 @@
 # -*- coding: utf-8 -*-
-#
-# Copyright (C) 2025 Takuro Hosomi
-# Email: t.hosomi1410@gmail.com
-# GitHub: https://github.com/korintje
-#
-# This script is licensed under the GNU Lesser General Public License v2.1 (LGPL-2.1).
-# You should have received a copy of the GNU Lesser General Public License along with this script.
-# If not, see <https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html>.
-
 
 import numpy as np
 from ase import Atoms
