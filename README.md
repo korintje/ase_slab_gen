@@ -4,7 +4,11 @@ This repository provides an enhanced tool for generating crystal slabs for atomi
 
 ## Overview
 
-Standard ASE slab generation tools are useful but have limitations, especially when dealing with complex surface terminations or custom adsorbate placements. This project implements a more robust and exhaustive approach to slab creation, based on the **SlabGenom** methodology. The original logic was developed by `nisihara.burai@gmail.com` and is also used in the GUI-based simulation platform [BURAI](https://github.com/BURAI-team/burai).
+ASE (Atomic Simulation Environment) provides built-in tools for slab generation, but they come with several limitations.　First, while conventional unit cells can be used as the source for slab construction, primitive cells are not supported.　Second, although multiple slab structures can theoretically exist for a given cleavage plane specified by Miller indices (hkl), the standard ASE slab generator always returns only a single structure. As a result, some desirable or stable slab configurations may not be accessible.
+
+This script set addresses these limitations by offering a more general and exhaustive approach to slab generation. It is based on the “SlabGenom” algorithm developed by Satomichi Nishihara, which is also used in the Java-based simulation platform [BURAI](https://github.com/BURAI-team/burai).
+
+In addition, ASE’s default tools make it difficult to handle adsorbates except in basic cases. In contrast, this script set employs original logic that allows for more flexible and precise design of adsorption structures, even for complex surface terminations or custom adsorbate placements.
 
 ## Limitations of Standard ASE Slab Tools
 
