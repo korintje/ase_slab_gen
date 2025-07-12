@@ -2,31 +2,23 @@
 
 This repository provides an enhanced tool for generating crystal slabs for atomic simulations, improving upon the standard slab generation features available in the [Atomic Simulation Environment (ASE)](https://wiki.fysik.dtu.dk/ase/).
 
-## Overview
-
-ASE (Atomic Simulation Environment) provides built-in tools for slab generation, but they come with several limitations.　First, while conventional unit cells can be used as the source for slab construction, primitive cells are not supported.　Second, although multiple slab structures can theoretically exist for a given cleavage plane specified by Miller indices (hkl), the standard ASE slab generator always returns only a single structure. As a result, some desirable or stable slab configurations may not be accessible.
-
-This script set addresses these limitations by offering a more general and exhaustive approach to slab generation. It is based on the “SlabGenom” algorithm developed by Satomichi Nishihara, which is also used in the Java-based simulation platform [BURAI](https://github.com/BURAI-team/burai).
-
-In addition, ASE’s default tools make it difficult to handle adsorbates except in basic cases. In contrast, this script set employs original logic that allows for more flexible and precise design of adsorption structures, even for complex surface terminations or custom adsorbate placements.
+In contrast, 
 
 ## Limitations of Standard ASE Slab Tools
 
 Although ASE provides basic tools for generating crystal slabs, users may encounter several issues:
 
-- **Incomplete Surface Enumeration**: ASE may not generate all symmetry-inequivalent surface terminations for a given Miller index.
-- **Cannot use primitive cells**: ASE's surface() function can only use conventional cells, not primitive cells.
-- **Unstable or Unphysical Slabs**: The resulting slabs may sometimes be chemically or structurally unstable.
-- **Manual Adsorbate Placement**: Accurately placing adsorbates on arbitrary surfaces often requires tedious manual adjustments, especially for non-standard structures.
+- **Cannot use primitive cells**: ASE's `surface()` function can only use conventional cells, not primitive cells.
+- **Incomplete Surface Enumeration**: Although multiple slab structures can theoretically exist for a given cleavage plane specified by Miller indices (hkl), the standard ASE slab generator always returns only a single structure.
+- **Manual Adsorbate Placement**: Accurately placing adsorbates on arbitrary surfaces often requires tedious manual adjustments, excepting some special structures.
 
 ## What This Tool Offers
 
-This improved slab generator addresses the above issues by:
+This improved slab generator `surfaces()` in `general_surfaces.py` addresses the above issues by:
 
-- **Systematically Enumerating All Terminations**: For a given Miller index, the tool generates all symmetry-inequivalent slab terminations that are physically meaningful.
-- **Primitive cells available**: Both the conventional cells and primitive cells can be used in the `surfaces()` function.
-- **Handling Complex Structures**: Robust support for arbitrary bulk structures beyond simple fcc, bcc, or hcp types.
-- **Flexible Adsorbate Support**: Allows better control over adsorbate positioning.
+- **Primitive cells available**: Both the conventional cells and primitive cells can be used.
+- **Systematically Enumerating All Terminations**: A general and exhaustive approach was used to slab generations based on “SlabGenom” algorithm originally developed by Satomichi Nishihara. He used this algorithm in a Java-based application [BURAI](https://github.com/BURAI-team/burai).
+- **Flexible Adsorbate Support**: Allows general controls over adsorbate positioning by considering "dangling bonds" created when cutting the bulk crystal.
 
 ## Getting Started
 
@@ -69,4 +61,4 @@ print(f"Generated {len(surface_list)} unique slab(s).")
 > Optional arguments allow fine-tuning slab thickness, symmetry tolerances, and more. See function docstrings for full details.
 
 # Acknowledgments
-The core slab generation logic is adapted from the SlabGenom system developed by nisihara.burai@gmail.com. It is also implemented in the [BURAI](https://github.com/BURAI-team/burai) graphical interface for quantum chemical calculations.
+The slab generation logic is based on “SlabGenom” algorithm originally developed by Satomichi Nishihara. It is also implemented in the [BURAI](https://github.com/BURAI-team/burai) graphical interface for quantum chemical calculations.
