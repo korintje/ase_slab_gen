@@ -1,3 +1,17 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (C) 2025 Takuro Hosomi
+# Email: t.hosomi1410@gmail.com
+# GitHub: https://github.com/korintje
+#
+# This script is licensed under the GNU Lesser General Public License v2.1 (LGPL-2.1).
+# You should have received a copy of the GNU Lesser General Public License along with this script.
+# If not, see <https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html>.
+#
+# The core slab generation logic is originally developed by nisihara.burai@gmail.com.
+# GitHub: https://github.com/BURAI-team/burai
+
+
 class Layer:
     """
     Represents a single atomic layer in a slab, identified by its chemical composition 
@@ -101,7 +115,7 @@ class SlabGenom:
         current = None
         count = 0
 
-        for name in sorted_names + [None]:  # Sentinel to flush last element
+        for name in sorted_names + [None]:
             if name == current:
                 count += 1
             else:

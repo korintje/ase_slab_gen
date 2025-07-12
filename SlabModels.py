@@ -1,3 +1,17 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (C) 2025 Takuro Hosomi
+# Email: t.hosomi1410@gmail.com
+# GitHub: https://github.com/korintje
+#
+# This script is licensed under the GNU Lesser General Public License v2.1 (LGPL-2.1).
+# You should have received a copy of the GNU Lesser General Public License along with this script.
+# If not, see <https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html>.
+#
+# The core slab generation logic is originally developed by nisihara.burai@gmail.com.
+# GitHub: https://github.com/BURAI-team/burai
+
+
 import numpy as np
 from itertools import product
 from ase import Atom as ASE_Atom
@@ -218,7 +232,6 @@ class SlabBulk():
         
         return new_atoms
 
-
     def create_dangling_bonds(self, offset, thickness):
         top_z_shift = float(thickness - 1) * self.trans_vec_set[2]
         top_bonds = []
@@ -347,9 +360,9 @@ class Slab():
 
     def __init__(self, trans_vec_set, atoms, top_bonds, bottom_bonds):
         self.trans_vec_set = trans_vec_set
-        self.atoms = atoms # List of Atom
-        self.top_bonds = top_bonds # List of Bonds
-        self.bottom_bonds = bottom_bonds # List of Bonds
+        self.atoms = atoms
+        self.top_bonds = top_bonds
+        self.bottom_bonds = bottom_bonds
 
     def to_atoms(self, adsorbates=[]):
         top_ads_atoms = self.create_ads_atoms(self.top_bonds, adsorbates)
@@ -358,7 +371,6 @@ class Slab():
         )
         all_atoms = self.atoms + top_ads_atoms + bottom_ads_atoms
 
-        # return new_atoms, new_trans_vec_set
         ase_atoms = ASE_Atoms()
         ase_atoms.set_cell(self.trans_vec_set)
         ase_atoms.set_pbc((True, True, False))

@@ -9,7 +9,7 @@ from general_surfaces import surfaces
 my_bulk = bulk("OZn", crystalstructure="wurtzite", a=3.289, b=3.289, c=5.307, alpha=90.000, u=None)
 
 # Set hkl indices
-h, k, l = 1, 0, 0
+h, k, l = 2, 0, 0
 
 # Define adsorbates
 hydroxyl = Atoms('OH', positions=[[0, 0, 0], [0, 0, 0.96]])

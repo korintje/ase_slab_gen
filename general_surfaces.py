@@ -1,3 +1,17 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (C) 2025 Takuro Hosomi
+# Email: t.hosomi1410@gmail.com
+# GitHub: https://github.com/korintje
+#
+# This script is licensed under the GNU Lesser General Public License v2.1 (LGPL-2.1).
+# You should have received a copy of the GNU Lesser General Public License along with this script.
+# If not, see <https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html>.
+#
+# The core slab generation logic is originally developed by nisihara.burai@gmail.com.
+# GitHub: https://github.com/BURAI-team/burai
+
+
 import numpy as np
 from ase.atoms import Atoms
 from SlabGenom import SlabGenom
@@ -47,13 +61,13 @@ def surfaces(
             Index of the atom in Atoms object which will be bounded with the surface atom.
             If not specified, index 0 is used by default.
     """
-    # Transform bulk cell using the Miller indices
-    transformed_bulk = convert_lattice_with_hkl_normal(lattice, *miller_indices)
+    # Transform lattice using the Miller indices
+    transformed_lattice = convert_lattice_with_hkl_normal(lattice, *miller_indices)
 
     # Generate slab configurations
-    slabs = _generate_slabs(transformed_bulk, num_layers)
+    slabs = _generate_slabs(transformed_lattice, num_layers)
 
-    # Convert slab objects to ASE Atoms, center them, and orthogonalize if needed
+    # Convert slab objects to ASE Atoms
     surfaces = []
     for slab in slabs:
         surface = slab.to_atoms(adsorbates=adsorbates)
@@ -69,7 +83,7 @@ def _generate_slabs(bulk: SlabBulk, num_layers: int) -> list[Slab]:
     """
     Generate unique slab configurations.
     bulk: SlabBulk
-        Transformed bulk structure.
+        Transformed lattice.
     num_layers: int
         Number of atomic layers in slab.
     Returns
