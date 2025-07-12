@@ -8,8 +8,8 @@
 # You should have received a copy of the GNU Lesser General Public License along with this script.
 # If not, see <https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html>.
 #
-# The core slab generation logic is originally developed by nisihara.burai@gmail.com.
-# GitHub: https://github.com/BURAI-team/burai
+# The idea of SlabGenom algorithm used in this script was originally developed 
+# by Satomichi Nishihara (nisihara.burai@gmail.com) in BURAI (https://github.com/BURAI-team/burai).
 
 
 class Layer:

@@ -7,9 +7,6 @@
 # This script is licensed under the GNU Lesser General Public License v2.1 (LGPL-2.1).
 # You should have received a copy of the GNU Lesser General Public License along with this script.
 # If not, see <https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html>.
-#
-# The core slab generation logic is originally developed by nisihara.burai@gmail.com.
-# GitHub: https://github.com/BURAI-team/burai
 
 
 import numpy as np
