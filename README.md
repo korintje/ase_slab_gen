@@ -2,8 +2,6 @@
 
 This repository provides an enhanced tool for generating crystal slabs for atomic simulations, improving upon the standard slab generation features available in the [Atomic Simulation Environment (ASE)](https://wiki.fysik.dtu.dk/ase/).
 
-In contrast, 
-
 ## Limitations of Standard ASE Slab Tools
 
 Although ASE provides basic tools for generating crystal slabs, users may encounter several issues:
