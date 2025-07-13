@@ -3,8 +3,7 @@
 import numpy as np
 from ase import Atoms
 from SlabModels import SlabAtom, SlabBulk
-from math import gcd
-from functools import reduce
+from math import lcm
 
 PACK_THR: float = 1.0e-6
 POSIT_THR = 0.01
@@ -42,28 +41,19 @@ def orient_lattice_xy(lattice_vecs: np.ndarray) -> np.ndarray:
     return new_lattice_vecs
 
 
-def lcm(a, b):
-    """Compute least common multiple of two integers."""
-    return abs(a * b) // gcd(a, b) if a and b else abs(a or b)
-
-
-def lcm_multiple(numbers):
-    """Compute the least common multiple (LCM) of a list of integers."""
-    return reduce(lcm, numbers, 1)
-
-
 def get_intercepts(h: int, k: int, l: int):
     """
     Given Miller indices (h, k, l), return:
     - Intercepts with each axis (in lattice units)
     """
+
     miller = np.array([h, k, l])
     nonzero = miller[miller != 0]
 
     if nonzero.size == 0:
         intercepts = np.zeros(3, dtype=int)
     else:
-        scale = lcm_multiple(nonzero)
+        scale = lcm(*nonzero)
         intercepts = np.array([
             scale // v if v != 0 else 0
             for v in miller
@@ -72,10 +62,20 @@ def get_intercepts(h: int, k: int, l: int):
     return intercepts
 
 
-def get_int_vecs(intercepts: np.ndarray) -> np.ndarray:
+def get_basis_trans_matrix(intercepts: np.ndarray) -> np.ndarray:
     """
-    Construct a set of 3 integer vectors aligned with the Miller plane,
-    based on the integer axis intercepts.
+    Construct a basis transformation matrix for lattice transformation,
+    aligning the given Miller plane (defined by its intercepts) as the new c-axis.
+    Parameters
+    ----------
+    intercepts : np.ndarray
+        Integer intercepts of the Miller plane with the crystal axes.
+    Returns
+    -------
+    np.ndarray
+        A 3x3 integer matrix:
+        - The first two rows span the Miller plane,
+        - The third row is the Miller plane normal vector.
     """
     vectors = np.zeros((3, 3), dtype=int)
     signs = np.sign(intercepts)
@@ -222,11 +222,11 @@ def convert_lattice_with_hkl_normal(
     if positions.size == 0:
         raise ValueError("Given atoms object is blank.")
     
-    int_vecs = get_int_vecs(get_intercepts(h, k, l))
-    bound_box = get_boundary_box(int_vecs)
-    latt_vecs_new = get_lattice_vecs(atoms, int_vecs)
+    basis_trans_matrix = get_basis_trans_matrix(get_intercepts(h, k, l))
+    bound_box = get_boundary_box(basis_trans_matrix)
+    latt_vecs_new = get_lattice_vecs(atoms, basis_trans_matrix)
     converted_cell = convert_atoms(
-        atoms, int_vecs, bound_box, latt_vecs_new
+        atoms, basis_trans_matrix, bound_box, latt_vecs_new
     )
 
     return converted_cell
