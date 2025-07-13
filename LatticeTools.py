@@ -225,10 +225,8 @@ def convert_lattice_with_hkl_normal(
     int_vecs = get_int_vecs(get_intercepts(h, k, l))
     bound_box = get_boundary_box(int_vecs)
     latt_vecs_new = get_lattice_vecs(atoms, int_vecs)
-    print(latt_vecs_new)
     converted_cell = convert_atoms(
         atoms, int_vecs, bound_box, latt_vecs_new
     )
-    print([atom.get_coord() for atom in converted_cell.atoms])
 
     return converted_cell
