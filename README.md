@@ -76,7 +76,28 @@ for i, slab in enumerate(slabs):
     plot_atoms(ext_slab, axarr[i], rotation=('-90x,-90y,0z'))
 fig.savefig(f"ZnO_100.png")
 ```
-> Optional arguments allow fine-tuning slab thickness, symmetry tolerances, and more. See function docstrings for full details.
+
+### Parameters
+```
+def surfaces(
+    lattice: Atoms,
+    miller_indices: tuple[int, int, int],
+    num_layers: int,
+    vacuum: float = 0.0,
+    orthogonal: bool = True,
+    adsorbates: list = []
+) -> list[Atoms]
+```
+- `lattice`: Bulk lattice structure of alloy or pure metal. Both the conventional cell and primitive cell can be used as the unit cell. One can also give the chemical symbol as a string, in which case the correct bulk lattice will be generated automatically.
+- `miller_indices`: Surface normal in Miller indices (h,k,l).
+- `layers`: Number of equivalent layers of the slab.
+- `vacuum`: Amount of vacuum added on both sides of the slab.
+- `orthogonal`: Whether the lattice will be converted to that whose upper plane is perpendicular to the normal vector specified by h, k, l
+- `adsorbates`: list of adsorbates mapping formatted as below:
+  - `adsorbate` (str, Atom, or Atoms): Adsorbate atom (molecule) object or its symbol
+  - `on` (str): Elemental symbol of the atom which the adsorbate will adsorb on.
+  - `bond_length` (float): Bond length between the adsorbate and the surface atom. If not specified, bond length of the dangling bond from the surface atom should have in the bulk cell will be applied.
+  - `ads_atom_index` (int): Index of the atom in Atoms object which will be bounded with the surface atom. If not specified, index 0 is used by default.
 
 # Acknowledgments
 The slab generation logic is based on “SlabGenom” algorithm originally developed by Satomichi Nishihara. It is also implemented in the [BURAI](https://github.com/BURAI-team/burai) graphical interface for quantum chemical calculations.
