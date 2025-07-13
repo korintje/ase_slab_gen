@@ -18,6 +18,10 @@ This improved slab generator `surfaces()` in `general_surfaces.py` addresses the
 - **Systematically Enumerating All Terminations**: A general and exhaustive approach was used to slab generations based on “SlabGenom” algorithm originally developed by Satomichi Nishihara. He used this algorithm in a Java-based application [BURAI](https://github.com/BURAI-team/burai).
 - **Flexible Adsorbate Support**: Allows general controls over adsorbate positioning by considering "dangling bonds" created when cutting the bulk crystal.
 
+e.g.) ZnO(100)
+
+<img width="1200" height="600" alt="ZnO_100" src="https://github.com/user-attachments/assets/2d369f5f-eb58-4208-bd5e-5010cf9d75b4" />
+
 ## Getting Started
 
 ### Installation
@@ -38,23 +42,39 @@ After cloning, you can import the surfaces function from the general_surfaces mo
 Here is a basic example demonstrating how to generate slabs for a silicon crystal:
 
 ```python
-import sys
-sys.path.append('path/to/ase_slab_gen')  # e.g. './ase_slab_gen'
-
+from ase import Atoms
 from ase.build import bulk
+import matplotlib.pyplot as plt
+from ase.visualize.plot import plot_atoms
 from general_surfaces import surfaces
 
-# 1. Create a bulk silicon crystal
-si = bulk('Si', 'diamond', a=5.43)
+# Create a bulk
+zno_bulk = bulk("OZn", crystalstructure="wurtzite", a=3.289, b=3.289, c=5.307, alpha=90.000, u=None)
 
-# 2. Generate slabs for the (1, 1, 1) plane with 10 Å slab and 10 Å vacuum
-surface_list = surfaces(si, (1, 1, 1), slab_thick=10, vacuum_thick=10)
+# Set hkl indices
+h, k, l = 1, 0, 0
 
-# 3. Save each slab to file
-for i, slab in enumerate(surface_list):
-    slab.write(f'Si_111_slab_{i}.xyz')
+# Define adsorbates
+hydroxyl = Atoms('OH', positions=[[0, 0, 0], [0, 0, 0.96]])
+ads = [
+    {"adsorbate": "H", "on": "O", "bond_length": 1.0},
+    {
+        "adsorbate": hydroxyl, 
+        "on": "Zn", 
+        "bond_length": 1.5, 
+        "ads_atom_index": 0,
+    },            
+]
 
-print(f"Generated {len(surface_list)} unique slab(s).")
+# Create all possible slabs (e.g. Two surfaces for ZnO(100))
+slabs = surfaces(zno_bulk, (h, k, l), 4, vacuum=10.0, adsorbates=ads)
+
+# Save slab images
+fig, axarr = plt.subplots(1, 2, figsize=(10, 5), dpi=300)
+for i, slab in enumerate(slabs):
+    ext_slab = slab * (4, 4, 1)
+    plot_atoms(ext_slab, axarr[i], rotation=('-90x,-90y,0z'))
+fig.savefig(f"ZnO_100.png")
 ```
 > Optional arguments allow fine-tuning slab thickness, symmetry tolerances, and more. See function docstrings for full details.
 
