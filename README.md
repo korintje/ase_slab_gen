@@ -18,7 +18,7 @@ This improved slab generator `surfaces()` in `general_surfaces.py` addresses the
 - **Systematically Enumerating All Terminations**: A general and exhaustive approach was used to slab generations based on “SlabGenom” algorithm originally developed by Satomichi Nishihara. He used this algorithm in a Java-based application [BURAI](https://github.com/BURAI-team/burai).
 - **Flexible Adsorbate Support**: Allows general controls over adsorbate positioning by considering "dangling bonds" created when cutting the bulk crystal.
 
-e.g.) ZnO(100)
+e.g.) Two surfaces are generated for ZnO(100) with H or OH terminations. 
 
 <img width="1200" height="600" alt="ZnO_100" src="https://github.com/user-attachments/assets/2d369f5f-eb58-4208-bd5e-5010cf9d75b4" />
 
