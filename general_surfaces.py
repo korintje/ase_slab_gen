@@ -18,7 +18,8 @@ def surfaces(
     num_layers: int,
     vacuum: float = 0.0,
     orthogonal: bool = True,
-    adsorbates: list = []
+    adsorbates: list = [],
+    bond_threshold: float = 1.4
 ) -> list[Atoms]:
     """Create surfaces from a given lattice and Miller indices.
 
@@ -48,9 +49,16 @@ def surfaces(
         ads_atom_index (optional): int
             Index of the atom in Atoms object which will be bounded with the surface atom.
             If not specified, index 0 is used by default.
+        bond_threshold: float (default: 1.4)
+            A scale factor used to detect bonding between atoms in the cell. 
+            If the distance between two atoms is smaller than bond_threshold 
+            multiplied by the minimum atomic distance within the cell, it is 
+            assumed that a bond exists between them.
     """
     # Transform lattice using the Miller indices
-    transformed_lattice = convert_lattice_with_hkl_normal(lattice, *miller_indices)
+    transformed_lattice = convert_lattice_with_hkl_normal(
+        lattice, *miller_indices, bond_threshold
+    )
 
     # Generate slab configurations
     slabs = _generate_slabs(transformed_lattice, num_layers)

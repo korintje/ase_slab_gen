@@ -184,6 +184,7 @@ def convert_atoms(
     int_vecs: np.ndarray,
     bound_box: np.ndarray,
     latt_vecs_new: np.ndarray,
+    bond_threshold: float,
 ) -> SlabBulk:
     """Generate a translated cell with a new lattice vectors."""
     positions = atoms.get_positions()
@@ -206,11 +207,11 @@ def convert_atoms(
                         cartesian = np.dot(shifted_abc, latt_vecs_new)
                         atoms_set.add(SlabAtom(symbol, cartesian))
 
-    return SlabBulk(latt_vecs_new, list(atoms_set), [])
+    return SlabBulk(latt_vecs_new, list(atoms_set), [], bond_threshold)
 
 
 def convert_lattice_with_hkl_normal(
-    atoms: Atoms, h: int, k: int, l: int
+    atoms: Atoms, h: int, k: int, l: int, bond_threshold: float
 ) -> SlabBulk:
     """
     Convert the orientation of a crystal structure so that the (hkl) plane 
@@ -226,7 +227,7 @@ def convert_lattice_with_hkl_normal(
     bound_box = get_boundary_box(basis_trans_matrix)
     latt_vecs_new = get_lattice_vecs(atoms, basis_trans_matrix)
     converted_cell = convert_atoms(
-        atoms, basis_trans_matrix, bound_box, latt_vecs_new
+        atoms, basis_trans_matrix, bound_box, latt_vecs_new, bond_threshold
     )
 
     return converted_cell

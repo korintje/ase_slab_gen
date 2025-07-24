@@ -7,7 +7,6 @@ from ase import Atoms as ASE_Atoms
 
 COEFFS = (0.0, 1.0, -1.0)
 BOUND_BOXES = np.array(tuple(product(COEFFS, COEFFS, COEFFS)))
-SCALE_FACTOR = 1.4
 MAX_FOR_CTHICK: int = 20
 POSIT_THR: float = 1.0e-4      # angstrom
 STEP_FOR_CTHICK: float = 0.05  # internal coordinate
@@ -156,10 +155,11 @@ class SlabAtom():
 
 class SlabBulk():
 
-    def __init__(self, trans_vec_set, atoms, bonds):  
+    def __init__(self, trans_vec_set, atoms, bonds, bond_threshold):  
         self.trans_vec_set = trans_vec_set
         self.atoms = atoms # List of Atom
         self.bonds = bonds # List of Bonds
+        self.bond_threshold = bond_threshold
     
     def setup_bonds(self):
         min_distance = np.inf
@@ -180,7 +180,7 @@ class SlabBulk():
                 virtual_bonds.append(vbond)
 
         min_distance = min([vbond.distance for vbond in virtual_bonds])   
-        thr_distance = SCALE_FACTOR * min_distance
+        thr_distance = self.bond_threshold * min_distance
         
         # Filer virtual bonds by the distance threashold to add bonds
         self.bonds = []
