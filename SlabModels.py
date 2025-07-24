@@ -30,6 +30,32 @@ class SlabBond():
         self.head_coord: np.ndarray = head_coord
         self.distance: float = distance
 
+    def __eq__(self, other):
+        if not isinstance(other, SlabBond):
+            return False
+        if self.tail_element != other.tail_element:
+            return False
+        if self.head_element != other.head_element:
+            return False
+        if not np.allclose(self.tail_coord, other.tail_coord, atol=POSIT_THR):
+            return False
+        if not np.allclose(self.head_coord, other.head_coord, atol=POSIT_THR):
+            return False
+        if not np.isclose(self.distance, other.distance, atol=POSIT_THR):
+            return False   
+        return True
+
+    def __hash__(self):
+        tail_tuple = tuple(np.round(self.tail_coord, 8))
+        head_tuple = tuple(np.round(self.head_coord, 8))
+        dist_rounded = round(self.distance, 8)
+        return hash((
+            self.tail_element,
+            self.head_element,
+            tail_tuple,
+            head_tuple,
+            dist_rounded
+        ))
 
     def get_tail_coord(self):
         return self.tail_coord
@@ -222,8 +248,8 @@ class SlabBulk():
 
     def create_dangling_bonds(self, offset, thickness):
         top_z_shift = float(thickness - 1) * self.trans_vec_set[2]
-        top_bonds = []
-        bottom_bonds = []
+        top_bonds = set()
+        bottom_bonds = set()
         for bond in self.bonds:
             
             abc_tail = bond.get_tail_coord_frac(self.trans_vec_set)
@@ -238,7 +264,7 @@ class SlabBulk():
                 inner_coord_tail = shifted_tail @ self.trans_vec_set
                 outer_coord_head = inner_coord_tail + bond_vec
                 if 0.0 <= shifted_tail[0] < 1.0 and 0.0 <= shifted_tail[1] < 1.0:
-                    top_bonds.append(
+                    top_bonds.add(
                         SlabBond(
                             bond.tail_element,
                             bond.head_element,
@@ -250,7 +276,7 @@ class SlabBulk():
                 inner_coord_head = outer_coord_head - self.trans_vec_set[2]
                 outer_coord_tail = inner_coord_head - bond_vec
                 if 0.0 <= shifted_head[0] < 1.0 and 0.0 <= shifted_head[1] < 1.0:
-                    bottom_bonds.append(
+                    bottom_bonds.add(
                         SlabBond(
                             bond.head_element,
                             bond.tail_element,
@@ -265,7 +291,7 @@ class SlabBulk():
                 inner_coord_tail = shifted_tail @ self.trans_vec_set
                 outer_coord_head = inner_coord_tail + bond_vec
                 if 0.0 <= shifted_tail[0] < 1.0 and 0.0 <= shifted_tail[1] < 1.0:
-                    bottom_bonds.append(
+                    bottom_bonds.add(
                         SlabBond(
                             bond.tail_element,
                             bond.head_element,
@@ -277,7 +303,7 @@ class SlabBulk():
                 outer_coord_tail = inner_coord_tail + self.trans_vec_set[2]
                 inner_coord_head = outer_coord_tail + bond_vec
                 if 0.0 <= shifted_head[0] < 1.0 and 0.0 <= shifted_head[1] < 1.0:
-                    top_bonds.append(
+                    top_bonds.add(
                         SlabBond(
                             bond.head_element,
                             bond.tail_element,
@@ -292,7 +318,7 @@ class SlabBulk():
                 inner_coord_head = shifted_head @ self.trans_vec_set
                 outer_coord_tail = inner_coord_head - bond_vec
                 if 0.0 <= shifted_head[0] < 1.0 and 0.0 <= shifted_head[1] < 1.0:
-                    top_bonds.append(
+                    top_bonds.add(
                         SlabBond(
                             bond.head_element,
                             bond.tail_element,
@@ -304,7 +330,7 @@ class SlabBulk():
                 outer_coord_head = inner_coord_head - self.trans_vec_set[2]
                 inner_coord_tail = outer_coord_head - bond_vec
                 if 0.0 <= shifted_tail[0] < 1.0 and 0.0 <= shifted_tail[1] < 1.0:
-                    bottom_bonds.append(
+                    bottom_bonds.add(
                         SlabBond(
                             bond.tail_element,
                             bond.head_element,
@@ -319,7 +345,7 @@ class SlabBulk():
                 inner_coord_head = shifted_head @ self.trans_vec_set
                 outer_coord_tail = inner_coord_head - bond_vec
                 if 0.0 <= shifted_head[0] < 1.0 and 0.0 <= shifted_head[1] < 1.0:
-                    bottom_bonds.append(
+                    bottom_bonds.add(
                         SlabBond(
                             bond.head_element,
                             bond.tail_element,
@@ -331,7 +357,7 @@ class SlabBulk():
                 outer_coord_head = inner_coord_head + self.trans_vec_set[2]
                 inner_coord_tail = outer_coord_head - bond_vec
                 if 0.0 <= shifted_tail[0] < 1.0 and 0.0 <= shifted_tail[1] < 1.0:
-                    top_bonds.append(
+                    top_bonds.add(
                         SlabBond(
                             bond.tail_element,
                             bond.head_element,
