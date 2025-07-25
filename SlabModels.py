@@ -396,52 +396,48 @@ class Slab():
 
     def create_ads_atoms(self, bonds, adsorbates, invert=False):
         ads_atoms = []
+        inv_trans = np.linalg.inv(self.trans_vec_set)
         for bond in bonds:
-            
-            adsorbate_props = next((ads for ads in adsorbates if ads["on"] == bond.tail_element), None)
-            if not adsorbate_props:
+            matched_adsorbates = [ads for ads in adsorbates if ads["on"] == bond.tail_element]
+            if not matched_adsorbates:
                 continue
-            
-            adsorbate = adsorbate_props.get("adsorbate")
-            bond_length = adsorbate_props.get("bond_length")
-            if bond_length:
-                tail_coord = bond.get_tail_coord()
-                head_coord = bond.get_head_coord()
-                vec = head_coord - tail_coord
-                head_coord = bond_length / np.linalg.norm(vec) * vec + tail_coord
-                head_abc = head_coord @ np.linalg.inv(self.trans_vec_set)
-            else:
-                head_coord = bond.get_head_coord()
-                head_abc = bond.get_head_coord_frac(self.trans_vec_set)
-
-            if type(adsorbate) == ASE_Atoms:
-                ads_atom_idx = adsorbate_props.get("ads_atom_index")
-                ads_atom_idx = ads_atom_idx if ads_atom_idx else 0
-                for atom in adsorbate:
-                    diff = atom.position - adsorbate[ads_atom_idx].position
-                    if invert:
-                        diff = -1 * diff
-                    ads_element = atom.symbol
-                    atom_pos = head_coord + diff
-                    atom_abc = atom_pos @ np.linalg.inv(self.trans_vec_set)
-                    ads_atom = SlabAtom(
-                        ads_element,
-                        self.calc_coords_in_cell(atom_abc)
-                    )
-                    ads_atoms.append(ads_atom)
-            else:
-                if type(adsorbate) == str:
-                    ads_element = adsorbate
-                elif type(adsorbate) == ASE_Atom:
-                    ads_element = adsorbate.symbol
+            tail_coord = bond.get_tail_coord()
+            orig_head_coord = bond.get_head_coord()
+            for props in matched_adsorbates:
+                adsorbate = props.get("adsorbate")
+                bond_length = props.get("bond_length")
+                if bond_length:
+                    vec = orig_head_coord - tail_coord
+                    head_coord = (bond_length / np.linalg.norm(vec)) * vec + tail_coord
                 else:
-                    raise TypeError("Invalid type Error: Adsorbates must be str, Atom, or Atoms.")
-                ads_atom = SlabAtom(
-                    ads_element,
-                    self.calc_coords_in_cell(head_abc)
-                )
-                ads_atoms.append(ads_atom)
-
+                    head_coord = orig_head_coord
+                head_abc = head_coord @ inv_trans
+                if isinstance(adsorbate, ASE_Atoms):
+                    base_idx = props.get("ads_atom_index", 0)
+                    base_pos = adsorbate[base_idx].position
+                    for atom in adsorbate:
+                        diff = atom.position - base_pos
+                        if invert:
+                            diff = -diff
+                        ads_atoms.append(
+                            SlabAtom(
+                                atom.symbol,
+                                self.calc_coords_in_cell((head_coord + diff) @ inv_trans)
+                            )
+                        )
+                else:
+                    if isinstance(adsorbate, ASE_Atom):
+                        ads_symbol = adsorbate.symbol
+                    elif isinstance(adsorbate, str):
+                        ads_symbol = adsorbate
+                    else:
+                        raise TypeError("Adsorbates must be str, ASE_Atom, or ASE_Atoms.")
+                    ads_atoms.append(
+                        SlabAtom(
+                            ads_symbol,
+                            self.calc_coords_in_cell(head_abc)
+                        )
+                    )
         return ads_atoms
     
     def calc_coords_in_cell(self, abc: np.ndarray) -> np.ndarray:
