@@ -98,7 +98,7 @@ def surfaces(
   - `on` (str): Elemental symbol of the atom which the adsorbate will adsorb on.
   - `bond_length` (float): Bond length between the adsorbate and the surface atom. If not specified, bond length of the dangling bond from the surface atom should have in the bulk cell will be applied.
   - `ads_atom_index` (int): Index of the atom in Atoms object which will be bounded with the surface atom. If not specified, index 0 is used by default.
-  - bond_threshold: float (default: 1.4): A scale factor used to detect bonding between atoms in the cell. If the distance between two atoms is smaller than bond_threshold multiplied by the minimum atomic distance within the cell, it is assumed that a bond exists between them.
+  - `bond_threshold` (float): A scale factor used to detect bonding between atoms in the cell. If the distance between two atoms is smaller than bond_threshold multiplied by the minimum atomic distance within the cell, it is assumed that a bond exists between them. Value 1.4 is used by default.
 
 # Acknowledgments
 The slab generation logic is based on “SlabGenom” algorithm originally developed by Satomichi Nishihara. It is also implemented in the [BURAI](https://github.com/BURAI-team/burai) graphical interface for quantum chemical calculations.
